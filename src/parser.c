@@ -1,57 +1,62 @@
 #include <stdio.h>
-#include <errno.h>
-#include <string.h>
 #include <stdlib.h>
-#include <sys/stat.h>
+#include <assert.h>
 
+#include "utils.h"
 #include "lexer.h"
+#include "parser.h"
 #include "raylib.h"
 
-char *load_file_contents(const char *path)
+void parse_inline(ASTLinkedList *children)
 {
-    struct stat buf_stat;
-    if(stat(path, &buf_stat) == -1) {
-        TraceLog(LOG_ERROR, "Couldn't open file %s: %s", path, strerror(errno));
-        return NULL;
+    TextNode *t = calloc(sizeof(TextNode), 1);
+
+    while(!lexer_is_next_terminal()) {
+        string_append_char(&t->str, lexer_consume());
     }
 
-    if((buf_stat.st_mode & S_IFMT) != S_IFREG) {
-        TraceLog(LOG_ERROR, "%s is not a valid file path", path);
-        return NULL;
-    }
-
-    FILE *file = fopen(path, "r");
-
-    if(file == NULL) {
-        TraceLog(LOG_ERROR, "Couldn't open file %s: %s\n", path, strerror(errno));
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    rewind(file);
-
-    char *text = calloc(sizeof(char), file_size + 1);
-
-    if(text == NULL) {
-        TraceLog(LOG_ERROR, "Couldn't allocate memory to contain the file");
-        return NULL;
-    }
-
-    fread(text, file_size, sizeof(char), file);
-    text[file_size] = '\0';
-
-    fclose(file);
-
-    return text;
+    create_and_add_item(children, AST_TEXT_NODE, t);
 }
 
-bool parse_file(const char *file_path)
+void parse_paragraph(ASTLinkedList *children)
+{
+    ParagraphNode *p = calloc(sizeof(ParagraphNode), 1);
+
+    while(!lexer_is_next_terminal()) {
+        parse_inline(&p->children);
+    }
+
+    create_and_add_item(children, AST_PARAGRAPH_NODE, p);
+}
+
+void parse_block(ASTLinkedList *children)
+{
+    parse_paragraph(children);
+}
+
+DocumentNode *parse_document()
+{
+    DocumentNode *doc = calloc(sizeof(DocumentNode), 1);
+
+    while(!lexer_is_at_end()) {
+        parse_block(&doc->children);
+        while(lexer_match('\n'));
+    }
+
+    return doc;
+}
+
+ASTItem *parse_file(const char *file_path)
 {
     char *file_content = load_file_contents(file_path);
-    if(file_content == NULL) return false;
+    if(file_content == NULL) return NULL;
 
     lexer_init(file_content);
 
-    return true;
+    return create_ast_item(AST_DOCUMENT_NODE, parse_document());
+}
+
+void parser_free_ast(ASTItem *doc_item)
+{
+    free_item(doc_item);
 }

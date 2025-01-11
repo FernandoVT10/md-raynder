@@ -1,6 +1,10 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-bool parse_file(const char *file_path);
+#include "nodes.h"
+
+ASTItem *parse_file(const char *file_path);
+
+void parser_free_ast(ASTItem *doc_item);
 
 #endif // PARSER_H

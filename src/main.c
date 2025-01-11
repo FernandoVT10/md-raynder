@@ -18,10 +18,13 @@ int main(int argc, char **argv)
 
     const char *file_path = argv[1];
 
-    if(!parse_file(file_path)) {
+    ASTItem *doc_item = parse_file(file_path);
+
+    if(doc_item == NULL) {
         return -1;
     }
 
-    print_ast();
+    print_ast(doc_item);
+    parser_free_ast(doc_item);
     return 0;
 }
