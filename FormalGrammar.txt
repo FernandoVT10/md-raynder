@@ -12,6 +12,17 @@ AtxStart -> "######" | "#####" | "####" | "###" | "##" | "#"
 AtxInline -> !Newline !AtxClosing Inline
 AtxClosing -> (SpaceChar+ '#'* SpaceChar*)
 
+CodeSpan -> Ticks1 (!Ticks1 !Terminal .)+ Ticks1
+          | Ticks2 (!Ticks2 !Terminal .)+ Ticks2
+          | Ticks3 (!Ticks3 !Terminal .)+ Ticks3
+          | Ticks4 (!Ticks4 !Terminal .)+ Ticks4
+          | Ticks5 (!Ticks5 !Terminal .)+ Ticks5
+Ticks1 -> "`" !'`'
+Ticks2 -> "``" !'`'
+Ticks3 -> "```" !'`'
+Ticks4 -> "````" !'`'
+Ticks5 -> "`````" !'`'
+
 SpaceChar -> ' ' | '\t'
 Terminal -> NewLine | EOF
 NewLine -> '\n'

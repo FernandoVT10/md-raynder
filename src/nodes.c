@@ -71,6 +71,11 @@ void free_item(ASTItem *item)
             free_children(&h->children);
             free(h);
         } break;
+        case AST_CODE_SPAN_NODE: {
+            CodeSpanNode *code = (CodeSpanNode*)item->data;
+            da_free(&code->content);
+            free(code);
+        } break;
         case AST_HR_NODE:
             break;
     }

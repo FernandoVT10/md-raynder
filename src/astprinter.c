@@ -55,6 +55,13 @@ void print_item(ASTItem *item, int spaces)
             print_spaces(spaces);
             printf("HORIZONTAL RULE {}\n");
         } break;
+        case AST_CODE_SPAN_NODE: {
+            CodeSpanNode *code = (CodeSpanNode*)item->data;
+            print_open_tag("CODE_SPAN", spaces);
+                print_spaces(spaces + 4);
+                printf("TEXT(%s)\n", string_dump(code->content));
+            print_close_tag(spaces);
+        } break;
     }
 }
 

@@ -10,8 +10,53 @@
 #include "raylib.h"
 
 #define MAX_HEADER_LEVEL 6
+#define MAX_BACKTICK_COUNT 5
 
 void parse_paragraph(ASTLinkedList *children, const char *initial_text);
+
+bool parse_code_span(ASTLinkedList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+    int backtick_count = 0;
+    while(lexer_match('`')) backtick_count++;
+
+    if(backtick_count > MAX_BACKTICK_COUNT || backtick_count < 1) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    CodeSpanNode *code = allocate_node(sizeof(CodeSpanNode));
+    bool closing_found = false;
+
+    while(!lexer_is_next_terminal()) {
+        if(lexer_match('`')) {
+            int count = 1;
+            while(lexer_match('`')) count++;
+
+            if(count == backtick_count) {
+                closing_found = true;
+                break;
+            } else {
+                while(count > 0) {
+                    string_append_char(&code->content, '`');
+                    count--;
+                }
+            }
+        }
+
+        string_append_char(&code->content, lexer_consume());
+    }
+
+    if(!closing_found) {
+        da_free(&code->content);
+        free(code);
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    create_and_add_item(children, AST_CODE_SPAN_NODE, code);
+    return true;
+}
 
 void parse_text(ASTLinkedList *children)
 {
@@ -32,6 +77,8 @@ void parse_text(ASTLinkedList *children)
 
 void parse_inline(ASTLinkedList *children)
 {
+    if(parse_code_span(children)) return;
+
     parse_text(children);
 }
 

@@ -8,7 +8,8 @@ typedef enum {
     AST_PARAGRAPH_NODE,
     AST_TEXT_NODE,
     AST_HEADER_NODE,
-    AST_HR_NODE
+    AST_HR_NODE,
+    AST_CODE_SPAN_NODE,
 } ASTNodeType;
 
 typedef struct ASTItem ASTItem;
@@ -40,6 +41,10 @@ typedef struct {
     ASTLinkedList children;
     int level;
 } HeaderNode;
+
+typedef struct {
+    String content;
+} CodeSpanNode;
 
 ASTItem *create_ast_item(ASTNodeType type, void *data);
 void add_ast_item(ASTLinkedList *children, ASTItem *item);
