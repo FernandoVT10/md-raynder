@@ -1,0 +1,12 @@
+Formal Grammar
+
+AtxHeading -> AtxStart SpaceChar+ AtxInline AtxClosing? Terminal?
+AtxStart -> "######" | "#####" | "####" | "###" | "##" | "#"
+AtxInline -> !Newline !AtxClosing Inline
+AtxClosing -> (SpaceChar+ '#'* SpaceChar*)
+
+SpaceChar -> ' ' | '\t'
+Terminal -> NewLine | EOF
+NewLine -> '\n'
+EOF -> !.
+Inline -> Str

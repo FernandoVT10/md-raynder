@@ -1,26 +1,100 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <ctype.h>
+#include <string.h>
 
 #include "utils.h"
 #include "lexer.h"
 #include "parser.h"
 #include "raylib.h"
 
-void parse_inline(ASTLinkedList *children)
-{
-    TextNode *t = calloc(sizeof(TextNode), 1);
+#define MAX_HEADER_LEVEL 6
 
-    while(!lexer_is_next_terminal()) {
-        string_append_char(&t->str, lexer_consume());
+void parse_paragraph(ASTLinkedList *children, const char *initial_text);
+
+void parse_text(ASTLinkedList *children)
+{
+    ASTItem *last_item = children->tail;
+    TextNode *t;
+    if(last_item != NULL && last_item->type == AST_TEXT_NODE) {
+        t = (TextNode*)last_item->data;
+    } else {
+        t = allocate_node(sizeof(TextNode));
+        create_and_add_item(children, AST_TEXT_NODE, t);
     }
 
-    create_and_add_item(children, AST_TEXT_NODE, t);
+    da_append(&t->str, lexer_consume());
+    while(isalpha(lexer_peek())) {
+        da_append(&t->str, lexer_consume());
+    }
 }
 
-void parse_paragraph(ASTLinkedList *children)
+void parse_inline(ASTLinkedList *children)
 {
-    ParagraphNode *p = calloc(sizeof(ParagraphNode), 1);
+    parse_text(children);
+}
+
+// returns true when an atx closing sequence is found
+// NOTE: this function consumes all the characters that are part
+// of the closing sequence when found
+bool atx_closing_found()
+{
+    if(lexer_is_next_terminal()) return true;
+
+    int start_pos = lexer_get_cur_pos();
+
+    if(!lexer_is_next_whitespace()) return false;
+
+    lexer_consume_whitespaces();
+    lexer_consume_all('#');
+    lexer_consume_whitespaces();
+
+    if(!lexer_is_next_terminal()) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    return true;
+}
+
+bool parse_atx_heading(ASTLinkedList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+    int level = 0;
+
+    while(lexer_match('#') && level <= MAX_HEADER_LEVEL) level++;
+
+    if(
+        (level < 1 || level > MAX_HEADER_LEVEL)
+        || (!lexer_is_next_whitespace() && !lexer_is_next_terminal())
+    ) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    lexer_consume_whitespaces();
+
+    HeaderNode *h = allocate_node(sizeof(HeaderNode));
+    h->level = level;
+
+    while(!atx_closing_found()) {
+        parse_inline(&h->children);
+    }
+
+    lexer_match('\n');
+
+    create_and_add_item(children, AST_HEADER_NODE, h);
+    return true;
+}
+
+void parse_paragraph(ASTLinkedList *children, const char *initial_text)
+{
+    ParagraphNode *p = allocate_node(sizeof(ParagraphNode));
+
+    if(initial_text != NULL) {
+        add_text_node(&p->children, initial_text);
+    }
 
     while(!lexer_is_next_terminal()) {
         parse_inline(&p->children);
@@ -31,12 +105,16 @@ void parse_paragraph(ASTLinkedList *children)
 
 void parse_block(ASTLinkedList *children)
 {
-    parse_paragraph(children);
+    if(parse_atx_heading(children)) {
+        return;
+    }
+
+    parse_paragraph(children, NULL);
 }
 
 DocumentNode *parse_document()
 {
-    DocumentNode *doc = calloc(sizeof(DocumentNode), 1);
+    DocumentNode *doc = allocate_node(sizeof(DocumentNode));
 
     while(!lexer_is_at_end()) {
         parse_block(&doc->children);

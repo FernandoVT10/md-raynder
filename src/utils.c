@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 #include "raylib.h"
 #include "utils.h"
@@ -51,6 +52,13 @@ void string_append_char(String *str, char c)
     da_append(str, c);
 }
 
+void string_append_str(String *str, const char *l_str)
+{
+    for(size_t i = 0; i < strlen(l_str); i++) {
+        da_append(str, l_str[i]);
+    }
+}
+
 char *string_dump(String str)
 {
     char *res = malloc(str.count + 1);
@@ -59,4 +67,15 @@ char *string_dump(String str)
     }
     res[str.count] = '\0';
     return res;
+}
+
+void string_trim_end(String *str)
+{
+    for(int i = str->count - 1; i > 0; i--) {
+        if(isspace(str->items[i])) {
+            str->count--;
+        } else {
+            break;
+        }
+    }
 }

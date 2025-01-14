@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "nodes.h"
 #include "raylib.h"
@@ -65,7 +66,36 @@ void free_item(ASTItem *item)
             da_free(&t->str);
             free(t);
         } break;
+        case AST_HEADER_NODE: {
+            HeaderNode *h = (HeaderNode*)item->data;
+            free_children(&h->children);
+            free(h);
+        } break;
     }
 
     free(item);
+}
+
+void add_text_node(ASTLinkedList *children, const char *text)
+{
+    ASTItem *last_item = children->tail;
+    if(last_item != NULL && last_item->type == AST_TEXT_NODE) {
+        TextNode *t = (TextNode*)last_item->data;
+        string_append_str(&t->str, text);
+    } else {
+        TextNode *t = allocate_node(sizeof(TextNode));
+        string_append_str(&t->str, text);
+        create_and_add_item(children, AST_TEXT_NODE, t);
+    }
+}
+
+void *allocate_node(size_t size)
+{
+    void *node = malloc(size);
+    if(node == NULL) {
+        TraceLog(LOG_ERROR, "Couldn't allocate memory for a node");
+        exit(EXIT_FAILURE);
+    }
+    memset(node, 0, size);
+    return node;
 }

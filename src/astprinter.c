@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "raylib.h"
 #include "nodes.h"
 
 void print_spaces(int n)
@@ -11,8 +12,7 @@ void print_spaces(int n)
 void print_open_tag(const char *text, int spaces)
 {
     print_spaces(spaces);
-    printf(text);
-    printf(" {\n");
+    printf("%s { \n", text);
 }
 
 void print_close_tag(int spaces)
@@ -44,6 +44,12 @@ void print_item(ASTItem *item, int spaces)
             char *text = string_dump(t->str);
             printf("TEXT(%s)\n", text);
             free(text);
+        } break;
+        case AST_HEADER_NODE: {
+            HeaderNode *h = (HeaderNode*)item->data;
+            print_open_tag(TextFormat("HEADER(%d)", h->level), spaces);
+                print_children(h->children, spaces);
+            print_close_tag(spaces);
         } break;
     }
 }
