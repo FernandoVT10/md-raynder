@@ -28,12 +28,17 @@ char lexer_get(int pos)
         return EOF;
     }
 
-    return lexer.buf[lexer.buf_cur];
+    return lexer.buf[pos];
 }
 
 char lexer_peek()
 {
     return lexer_get(lexer.buf_cur);
+}
+
+char lexer_prev()
+{
+    return lexer_get(lexer.buf_cur - 1);
 }
 
 char lexer_consume()

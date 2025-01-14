@@ -13,6 +13,7 @@ void lexer_init(const char *buf);
 int lexer_get_cur_pos(void); // returns buf_cur pos
 void lexer_set_cur_pos(int pos); // sets buf_cur pos
 
+char lexer_prev(void); // returns previous char
 char lexer_peek(void); // returns current char without advancing the cursor
 
 char lexer_consume(void); // returns char and advance cursor

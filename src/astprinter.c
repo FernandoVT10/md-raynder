@@ -51,6 +51,10 @@ void print_item(ASTItem *item, int spaces)
                 print_children(h->children, spaces);
             print_close_tag(spaces);
         } break;
+        case AST_HR_NODE: {
+            print_spaces(spaces);
+            printf("HORIZONTAL RULE {}\n");
+        } break;
     }
 }
 

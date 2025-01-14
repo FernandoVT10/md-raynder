@@ -8,6 +8,7 @@ typedef enum {
     AST_PARAGRAPH_NODE,
     AST_TEXT_NODE,
     AST_HEADER_NODE,
+    AST_HR_NODE
 } ASTNodeType;
 
 typedef struct ASTItem ASTItem;

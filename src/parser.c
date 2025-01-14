@@ -88,6 +88,37 @@ bool parse_atx_heading(ASTLinkedList *children)
     return true;
 }
 
+bool parse_horizontal_rule(ASTLinkedList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+
+    lexer_consume_whitespaces();
+
+    if(!lexer_match_many("*-_")) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    char indicator = lexer_prev();
+    int ind_count = 1;
+
+    lexer_consume_whitespaces();
+    while(!lexer_is_next_terminal() && lexer_match(indicator)) {
+        lexer_consume_whitespaces();
+        ind_count++;
+    }
+
+    if(ind_count < 3 || !lexer_is_next_terminal()) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    lexer_match('\n');
+
+    create_and_add_item(children, AST_HR_NODE, NULL);
+    return true;
+}
+
 void parse_paragraph(ASTLinkedList *children, const char *initial_text)
 {
     ParagraphNode *p = allocate_node(sizeof(ParagraphNode));
@@ -105,9 +136,8 @@ void parse_paragraph(ASTLinkedList *children, const char *initial_text)
 
 void parse_block(ASTLinkedList *children)
 {
-    if(parse_atx_heading(children)) {
-        return;
-    }
+    if(parse_atx_heading(children)) return;
+    if(parse_horizontal_rule(children)) return;
 
     parse_paragraph(children, NULL);
 }

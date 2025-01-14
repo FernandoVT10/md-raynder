@@ -71,6 +71,8 @@ void free_item(ASTItem *item)
             free_children(&h->children);
             free(h);
         } break;
+        case AST_HR_NODE:
+            break;
     }
 
     free(item);

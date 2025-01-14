@@ -1,6 +1,13 @@
 Formal Grammar
 
-AtxHeading -> AtxStart SpaceChar+ AtxInline AtxClosing? Terminal?
+Block -> HorizontalRule | AtxHeading
+
+HorizontalRule -> SpaceChar* ( '*' SpaceChar* '*' SpaceChar* '*' (SpaceChar* '*')*
+                             | '-' SpaceChar* '-' SpaceChar* '-' (SpaceChar* '-')*
+                             | '_' SpaceChar* '_' SpaceChar* '_' (SpaceChar* '_')*)
+                  SpaceChar* Terminal
+
+AtxHeading -> AtxStart SpaceChar+ AtxInline AtxClosing? Terminal
 AtxStart -> "######" | "#####" | "####" | "###" | "##" | "#"
 AtxInline -> !Newline !AtxClosing Inline
 AtxClosing -> (SpaceChar+ '#'* SpaceChar*)
