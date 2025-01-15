@@ -10,6 +10,7 @@ typedef enum {
     AST_HEADER_NODE,
     AST_HR_NODE,
     AST_CODE_SPAN_NODE,
+    AST_EMPHASIS_NODE,
 } ASTNodeType;
 
 typedef struct ASTItem ASTItem;
@@ -46,12 +47,18 @@ typedef struct {
     String content;
 } CodeSpanNode;
 
+typedef ParentNode EmphasisNode;
+
 ASTItem *create_ast_item(ASTNodeType type, void *data);
 void add_ast_item(ASTLinkedList *children, ASTItem *item);
 void create_and_add_item(ASTLinkedList *children, ASTNodeType type, void *data);
+void free_ast_linked_list(ASTLinkedList *children);
 void free_item(ASTItem *item);
 
+// TODO: this is not a good name :)
 void add_text_node(ASTLinkedList *children, const char *text);
 void *allocate_node(size_t size);
+
+void catenate_ast_linked_lists(ASTLinkedList *dest, ASTLinkedList src);
 
 #endif

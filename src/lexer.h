@@ -27,5 +27,6 @@ bool lexer_match_many(const char *chars);
 bool lexer_is_next_terminal(void); // returns true if next char is EOF or '\n'
 bool lexer_is_at_end(void); // returns true if "buf_cur" is at the end of buffer
 bool lexer_is_next_whitespace(); // returns true if next char is ' ' or '\t'
+bool lexer_is_prev_whitespace(); // returns true if prev char is ' ' or '\t'
 
 #endif // LEXER_H

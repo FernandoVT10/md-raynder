@@ -12,7 +12,7 @@
 #define MAX_HEADER_LEVEL 6
 #define MAX_BACKTICK_COUNT 5
 
-void parse_paragraph(ASTLinkedList *children, const char *initial_text);
+void parse_inline(ASTLinkedList *children);
 
 bool parse_code_span(ASTLinkedList *children)
 {
@@ -58,6 +58,49 @@ bool parse_code_span(ASTLinkedList *children)
     return true;
 }
 
+bool parse_emphasis(ASTLinkedList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+
+    if(!lexer_match_many("*_") || lexer_is_next_whitespace()) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    char indicator = lexer_prev();
+
+
+    ASTLinkedList e_children = {0};
+
+    bool closing_found = false;
+
+    while(!lexer_is_next_terminal()) {
+        if(!lexer_is_prev_whitespace() && lexer_match(indicator)) {
+            closing_found = true;
+            break;
+        }
+
+        parse_inline(&e_children);
+    }
+
+    if(e_children.count == 0) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    if(!closing_found) {
+        // TODO: we have already the children list, we could reuse that
+        free_ast_linked_list(&e_children);
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    EmphasisNode *e = allocate_node(sizeof(EmphasisNode));
+    e->children = e_children;
+    create_and_add_item(children, AST_EMPHASIS_NODE, e);
+    return true;
+}
+
 void parse_text(ASTLinkedList *children)
 {
     ASTItem *last_item = children->tail;
@@ -78,6 +121,7 @@ void parse_text(ASTLinkedList *children)
 void parse_inline(ASTLinkedList *children)
 {
     if(parse_code_span(children)) return;
+    if(parse_emphasis(children)) return;
 
     parse_text(children);
 }
@@ -166,13 +210,9 @@ bool parse_horizontal_rule(ASTLinkedList *children)
     return true;
 }
 
-void parse_paragraph(ASTLinkedList *children, const char *initial_text)
+void parse_paragraph(ASTLinkedList *children)
 {
     ParagraphNode *p = allocate_node(sizeof(ParagraphNode));
-
-    if(initial_text != NULL) {
-        add_text_node(&p->children, initial_text);
-    }
 
     while(!lexer_is_next_terminal()) {
         parse_inline(&p->children);
@@ -186,7 +226,7 @@ void parse_block(ASTLinkedList *children)
     if(parse_atx_heading(children)) return;
     if(parse_horizontal_rule(children)) return;
 
-    parse_paragraph(children, NULL);
+    parse_paragraph(children);
 }
 
 DocumentNode *parse_document()

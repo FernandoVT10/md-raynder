@@ -93,3 +93,9 @@ bool lexer_is_next_whitespace()
     char c = lexer_peek();
     return c == ' ' || c == '\t';
 }
+
+bool lexer_is_prev_whitespace()
+{
+    char c = lexer_prev();
+    return c == ' ' || c == '\t';
+}

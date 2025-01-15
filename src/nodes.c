@@ -37,7 +37,7 @@ void create_and_add_item(ASTLinkedList *children, ASTNodeType type, void *data)
     add_ast_item(children, create_ast_item(type, data));
 }
 
-void free_children(ASTLinkedList *children)
+void free_ast_linked_list(ASTLinkedList *children)
 {
     ASTItem *item = children->head;
 
@@ -50,15 +50,17 @@ void free_children(ASTLinkedList *children)
 
 void free_item(ASTItem *item)
 {
+    // TODO: document, paragraph, and emphasis are the same as the ParentNode
+    // they could share the way to free them
     switch(item->type) {
         case AST_DOCUMENT_NODE: {
             DocumentNode *doc = (DocumentNode*)item->data;
-            free_children(&doc->children);
+            free_ast_linked_list(&doc->children);
             free(doc);
         } break;
         case AST_PARAGRAPH_NODE: {
             ParagraphNode *p = (ParagraphNode*)item->data;
-            free_children(&p->children);
+            free_ast_linked_list(&p->children);
             free(p);
         } break;
         case AST_TEXT_NODE: {
@@ -68,13 +70,18 @@ void free_item(ASTItem *item)
         } break;
         case AST_HEADER_NODE: {
             HeaderNode *h = (HeaderNode*)item->data;
-            free_children(&h->children);
+            free_ast_linked_list(&h->children);
             free(h);
         } break;
         case AST_CODE_SPAN_NODE: {
             CodeSpanNode *code = (CodeSpanNode*)item->data;
             da_free(&code->content);
             free(code);
+        } break;
+        case AST_EMPHASIS_NODE: {
+            EmphasisNode *e = (EmphasisNode*)item->data;
+            free_ast_linked_list(&e->children);
+            free(e);
         } break;
         case AST_HR_NODE:
             break;
@@ -105,4 +112,18 @@ void *allocate_node(size_t size)
     }
     memset(node, 0, size);
     return node;
+}
+
+void catenate_ast_linked_lists(ASTLinkedList *dest, ASTLinkedList src)
+{
+    if(src.count == 0) return;
+
+    if(dest->count > 0) {
+        ASTItem *last_child = dest->tail;
+        last_child->next = src.head;
+        dest->tail = src.tail;
+    } else {
+        dest->head = src.head;
+        dest->tail = src.tail;
+    }
 }
