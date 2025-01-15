@@ -25,6 +25,6 @@ int main(int argc, char **argv)
     }
 
     print_ast(doc_item);
-    parser_free_ast(doc_item);
+    ast_free_item(doc_item);
     return 0;
 }

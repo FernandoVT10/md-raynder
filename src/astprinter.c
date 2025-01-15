@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "raylib.h"
-#include "nodes.h"
+#include "ast.h"
 
 void print_spaces(int n)
 {
@@ -21,7 +21,7 @@ void print_close_tag(int spaces)
     printf("}\n");
 }
 
-void print_children(ASTLinkedList children, int spaces);
+void print_list(ASTList list, int spaces);
 
 void print_item(ASTItem *item, int spaces)
 {
@@ -29,13 +29,13 @@ void print_item(ASTItem *item, int spaces)
         case AST_DOCUMENT_NODE: {
             DocumentNode *doc = (DocumentNode*)item->data;
             print_open_tag("DOCUMENT", spaces);
-                print_children(doc->children, spaces);
+                print_list(doc->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_PARAGRAPH_NODE: {
             ParagraphNode *p = (ParagraphNode*)item->data;
             print_open_tag("PARAGRAPH", spaces);
-                print_children(p->children, spaces);
+                print_list(p->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_TEXT_NODE: {
@@ -48,7 +48,7 @@ void print_item(ASTItem *item, int spaces)
         case AST_HEADER_NODE: {
             HeaderNode *h = (HeaderNode*)item->data;
             print_open_tag(TextFormat("HEADER(%d)", h->level), spaces);
-                print_children(h->children, spaces);
+                print_list(h->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_HR_NODE: {
@@ -65,15 +65,15 @@ void print_item(ASTItem *item, int spaces)
         case AST_EMPHASIS_NODE: {
             EmphasisNode *e = (EmphasisNode*)item->data;
             print_open_tag("EMPHASIS", spaces);
-                print_children(e->children, spaces);
+                print_list(e->children, spaces);
             print_close_tag(spaces);
         } break;
     }
 }
 
-void print_children(ASTLinkedList children, int spaces)
+void print_list(ASTList list, int spaces)
 {
-    ASTItem *item = children.head;
+    ASTItem *item = list.head;
     while(item != NULL) {
         print_item(item, spaces + 4);
 

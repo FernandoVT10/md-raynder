@@ -68,3 +68,14 @@ char *string_dump(String str)
     res[str.count] = '\0';
     return res;
 }
+
+void *allocate(size_t size)
+{
+    void *ptr = malloc(size);
+    if(ptr == NULL) {
+        TraceLog(LOG_ERROR, "Couldn't allocate memory :(");
+        exit(EXIT_FAILURE);
+    }
+    memset(ptr, 0, size);
+    return ptr;
+}

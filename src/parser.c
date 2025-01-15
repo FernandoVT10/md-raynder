@@ -12,9 +12,9 @@
 #define MAX_HEADER_LEVEL 6
 #define MAX_BACKTICK_COUNT 5
 
-void parse_inline(ASTLinkedList *children);
+void parse_inline(ASTList *children);
 
-bool parse_code_span(ASTLinkedList *children)
+bool parse_code_span(ASTList *children)
 {
     int start_pos = lexer_get_cur_pos();
     int backtick_count = 0;
@@ -25,7 +25,7 @@ bool parse_code_span(ASTLinkedList *children)
         return false;
     }
 
-    CodeSpanNode *code = allocate_node(sizeof(CodeSpanNode));
+    CodeSpanNode *code = allocate(sizeof(CodeSpanNode));
     bool closing_found = false;
 
     while(!lexer_is_next_terminal()) {
@@ -36,11 +36,11 @@ bool parse_code_span(ASTLinkedList *children)
             if(count == backtick_count) {
                 closing_found = true;
                 break;
-            } else {
-                while(count > 0) {
-                    string_append_char(&code->content, '`');
-                    count--;
-                }
+            }
+
+            while(count > 0) {
+                string_append_char(&code->content, '`');
+                count--;
             }
         }
 
@@ -54,11 +54,11 @@ bool parse_code_span(ASTLinkedList *children)
         return false;
     }
 
-    create_and_add_item(children, AST_CODE_SPAN_NODE, code);
+    ast_list_create_and_add(children, AST_CODE_SPAN_NODE, code);
     return true;
 }
 
-bool parse_emphasis(ASTLinkedList *children)
+bool parse_emphasis(ASTList *children)
 {
     int start_pos = lexer_get_cur_pos();
 
@@ -69,8 +69,7 @@ bool parse_emphasis(ASTLinkedList *children)
 
     char indicator = lexer_prev();
 
-
-    ASTLinkedList e_children = {0};
+    ASTList e_children = {0};
 
     bool closing_found = false;
 
@@ -90,26 +89,26 @@ bool parse_emphasis(ASTLinkedList *children)
 
     if(!closing_found) {
         // TODO: we have already the children list, we could reuse that
-        free_ast_linked_list(&e_children);
+        ast_free_list(&e_children);
         lexer_set_cur_pos(start_pos);
         return false;
     }
 
-    EmphasisNode *e = allocate_node(sizeof(EmphasisNode));
+    EmphasisNode *e = allocate(sizeof(EmphasisNode));
     e->children = e_children;
-    create_and_add_item(children, AST_EMPHASIS_NODE, e);
+    ast_list_create_and_add(children, AST_EMPHASIS_NODE, e);
     return true;
 }
 
-void parse_text(ASTLinkedList *children)
+void parse_text(ASTList *children)
 {
     ASTItem *last_item = children->tail;
     TextNode *t;
     if(last_item != NULL && last_item->type == AST_TEXT_NODE) {
         t = (TextNode*)last_item->data;
     } else {
-        t = allocate_node(sizeof(TextNode));
-        create_and_add_item(children, AST_TEXT_NODE, t);
+        t = allocate(sizeof(TextNode));
+        ast_list_create_and_add(children, AST_TEXT_NODE, t);
     }
 
     da_append(&t->str, lexer_consume());
@@ -118,7 +117,7 @@ void parse_text(ASTLinkedList *children)
     }
 }
 
-void parse_inline(ASTLinkedList *children)
+void parse_inline(ASTList *children)
 {
     if(parse_code_span(children)) return;
     if(parse_emphasis(children)) return;
@@ -149,7 +148,7 @@ bool atx_closing_found()
     return true;
 }
 
-bool parse_atx_heading(ASTLinkedList *children)
+bool parse_atx_heading(ASTList *children)
 {
     int start_pos = lexer_get_cur_pos();
     int level = 0;
@@ -166,7 +165,7 @@ bool parse_atx_heading(ASTLinkedList *children)
 
     lexer_consume_whitespaces();
 
-    HeaderNode *h = allocate_node(sizeof(HeaderNode));
+    HeaderNode *h = allocate(sizeof(HeaderNode));
     h->level = level;
 
     while(!atx_closing_found()) {
@@ -175,11 +174,11 @@ bool parse_atx_heading(ASTLinkedList *children)
 
     lexer_match('\n');
 
-    create_and_add_item(children, AST_HEADER_NODE, h);
+    ast_list_create_and_add(children, AST_HEADER_NODE, h);
     return true;
 }
 
-bool parse_horizontal_rule(ASTLinkedList *children)
+bool parse_horizontal_rule(ASTList *children)
 {
     int start_pos = lexer_get_cur_pos();
 
@@ -206,22 +205,22 @@ bool parse_horizontal_rule(ASTLinkedList *children)
 
     lexer_match('\n');
 
-    create_and_add_item(children, AST_HR_NODE, NULL);
+    ast_list_create_and_add(children, AST_HR_NODE, NULL);
     return true;
 }
 
-void parse_paragraph(ASTLinkedList *children)
+void parse_paragraph(ASTList *children)
 {
-    ParagraphNode *p = allocate_node(sizeof(ParagraphNode));
+    ParagraphNode *p = allocate(sizeof(ParagraphNode));
 
     while(!lexer_is_next_terminal()) {
         parse_inline(&p->children);
     }
 
-    create_and_add_item(children, AST_PARAGRAPH_NODE, p);
+    ast_list_create_and_add(children, AST_PARAGRAPH_NODE, p);
 }
 
-void parse_block(ASTLinkedList *children)
+void parse_block(ASTList *children)
 {
     if(parse_atx_heading(children)) return;
     if(parse_horizontal_rule(children)) return;
@@ -231,7 +230,7 @@ void parse_block(ASTLinkedList *children)
 
 DocumentNode *parse_document()
 {
-    DocumentNode *doc = allocate_node(sizeof(DocumentNode));
+    DocumentNode *doc = allocate(sizeof(DocumentNode));
 
     while(!lexer_is_at_end()) {
         parse_block(&doc->children);
@@ -248,10 +247,5 @@ ASTItem *parse_file(const char *file_path)
 
     lexer_init(file_content);
 
-    return create_ast_item(AST_DOCUMENT_NODE, parse_document());
-}
-
-void parser_free_ast(ASTItem *doc_item)
-{
-    free_item(doc_item);
+    return ast_create_item(AST_DOCUMENT_NODE, parse_document());
 }

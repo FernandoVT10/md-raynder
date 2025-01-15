@@ -25,10 +25,10 @@ typedef struct {
     ASTItem *head;
     ASTItem *tail;
     size_t count;
-} ASTLinkedList;
+} ASTList;
 
 typedef struct {
-    ASTLinkedList children;
+    ASTList children;
 } ParentNode;
 
 typedef ParentNode DocumentNode;
@@ -39,7 +39,7 @@ typedef struct {
 } TextNode;
 
 typedef struct {
-    ASTLinkedList children;
+    ASTList children;
     int level;
 } HeaderNode;
 
@@ -49,16 +49,11 @@ typedef struct {
 
 typedef ParentNode EmphasisNode;
 
-ASTItem *create_ast_item(ASTNodeType type, void *data);
-void add_ast_item(ASTLinkedList *children, ASTItem *item);
-void create_and_add_item(ASTLinkedList *children, ASTNodeType type, void *data);
-void free_ast_linked_list(ASTLinkedList *children);
-void free_item(ASTItem *item);
-
-// TODO: this is not a good name :)
-void add_text_node(ASTLinkedList *children, const char *text);
-void *allocate_node(size_t size);
-
-void catenate_ast_linked_lists(ASTLinkedList *dest, ASTLinkedList src);
+ASTItem *ast_create_item(ASTNodeType type, void *data);
+void ast_add_item(ASTList *list, ASTItem *item); // adds and ASTItem to an ASTList
+void ast_list_create_and_add(ASTList *list, ASTNodeType type, void *data); // creates ASTItem and adds it to the list
+void ast_free_list(ASTList *list);
+void ast_free_item(ASTItem *item);
+void ast_add_text(ASTList *list, const char *text); // Adds or catenates (if the last item of the list is a text node) a text node
 
 #endif
