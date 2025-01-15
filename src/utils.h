@@ -32,6 +32,5 @@ char *load_file_contents(const char *path); // returns the contents of a file (s
 void string_append_char(String *str, char c);
 void string_append_str(String *str, const char *l_str); // appends string literal
 char *string_dump(String str); // returns a string null-terminated (should be freed)
-void string_trim_end(String *str); // removes final trailing spaces from string
 
 #endif // UTILS_H

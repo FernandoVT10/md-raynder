@@ -68,14 +68,3 @@ char *string_dump(String str)
     res[str.count] = '\0';
     return res;
 }
-
-void string_trim_end(String *str)
-{
-    for(int i = str->count - 1; i > 0; i--) {
-        if(isspace(str->items[i])) {
-            str->count--;
-        } else {
-            break;
-        }
-    }
-}
