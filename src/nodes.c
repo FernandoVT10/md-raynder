@@ -50,6 +50,8 @@ void free_children(ASTLinkedList *children)
 
 void free_item(ASTItem *item)
 {
+    // TODO: document, paragraph, and emphasis are the same as the ParentNode
+    // they could share the way to free them
     switch(item->type) {
         case AST_DOCUMENT_NODE: {
             DocumentNode *doc = (DocumentNode*)item->data;
@@ -75,6 +77,11 @@ void free_item(ASTItem *item)
             CodeSpanNode *code = (CodeSpanNode*)item->data;
             da_free(&code->content);
             free(code);
+        } break;
+        case AST_EMPHASIS_NODE: {
+            EmphasisNode *e = (EmphasisNode*)item->data;
+            free_children(&e->children);
+            free(e);
         } break;
         case AST_HR_NODE:
             break;
@@ -105,4 +112,18 @@ void *allocate_node(size_t size)
     }
     memset(node, 0, size);
     return node;
+}
+
+void catenate_ast_linked_lists(ASTLinkedList *dest, ASTLinkedList src)
+{
+    if(src.count == 0) return;
+
+    if(dest->count > 0) {
+        ASTItem *last_child = dest->tail;
+        last_child->next = src.head;
+        dest->tail = src.tail;
+    } else {
+        dest->head = src.head;
+        dest->tail = src.tail;
+    }
 }

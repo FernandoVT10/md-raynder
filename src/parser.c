@@ -12,6 +12,7 @@
 #define MAX_HEADER_LEVEL 6
 #define MAX_BACKTICK_COUNT 5
 
+void parse_inline(ASTLinkedList *children);
 void parse_paragraph(ASTLinkedList *children, const char *initial_text);
 
 bool parse_code_span(ASTLinkedList *children)
@@ -58,6 +59,43 @@ bool parse_code_span(ASTLinkedList *children)
     return true;
 }
 
+bool parse_emphasis(ASTLinkedList *children)
+{
+
+    // EmphasisStar -> '*' !SpaceChar (!'*' Inline)+ !SpaceChar '*'
+    int start_pos = lexer_get_cur_pos();
+
+    if(!lexer_match_many("*_") || lexer_is_next_whitespace()) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    char indicator = lexer_prev();
+
+
+    ASTLinkedList e_children = {0};
+
+    while(!lexer_is_next_terminal() && !lexer_match(indicator)) {
+        parse_inline(&e_children);
+    }
+
+    if(e_children.count == 0) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    if(lexer_prev() != indicator) {
+        add_text_node(children, "*");
+        catenate_ast_linked_lists(children, e_children);
+        return false;
+    }
+
+    EmphasisNode *e = allocate_node(sizeof(EmphasisNode));
+    e->children = e_children;
+    create_and_add_item(children, AST_EMPHASIS_NODE, e);
+    return true;
+}
+
 void parse_text(ASTLinkedList *children)
 {
     ASTItem *last_item = children->tail;
@@ -78,6 +116,7 @@ void parse_text(ASTLinkedList *children)
 void parse_inline(ASTLinkedList *children)
 {
     if(parse_code_span(children)) return;
+    if(parse_emphasis(children)) return;
 
     parse_text(children);
 }

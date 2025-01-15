@@ -23,8 +23,12 @@ Ticks3 -> "```" !'`'
 Ticks4 -> "````" !'`'
 Ticks5 -> "`````" !'`'
 
+Emphasis -> EmphasisStar | EmphasisUnderscore
+EmphasisStar -> '*' !SpaceChar (!'*' Inline)+ !SpaceChar '*'
+EmphasisUnderscore -> '_' !SpaceChar (!'_' Inline)+  !SpaceChar '_'
+
 SpaceChar -> ' ' | '\t'
 Terminal -> NewLine | EOF
 NewLine -> '\n'
 EOF -> !.
-Inline -> Str
+Inline -> Str | CodeSpan | Emphasis
