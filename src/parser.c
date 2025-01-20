@@ -58,6 +58,55 @@ bool parse_code_span(ASTList *children)
     return true;
 }
 
+bool parse_strong(ASTList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+    if(!(lexer_match_many("*_") && lexer_match_many("*_")) || lexer_is_next_whitespace()) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    char indicator = lexer_prev();
+    ASTList s_children = {0};
+
+    bool closing_found = false;
+
+    int cur_pos = 0;
+
+    while(!lexer_is_next_terminal()) {
+        cur_pos = lexer_get_cur_pos();
+        if(!lexer_is_prev_whitespace()
+            && lexer_match(indicator)
+            && lexer_match(indicator)
+        ) {
+            closing_found = true;
+            break;
+        } else {
+            lexer_set_cur_pos(cur_pos);
+        }
+
+        parse_inline(&s_children);
+    }
+
+    if(s_children.count == 0) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    if(!closing_found) {
+        // TODO: we have already the children list, we could reuse that
+        ast_free_list(&s_children);
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    StrongNode *s = allocate(sizeof(StrongNode));
+    s->children = s_children;
+    ast_list_create_and_add(children, AST_STRONG_NODE, s);
+
+    return true;
+}
+
 bool parse_emphasis(ASTList *children)
 {
     int start_pos = lexer_get_cur_pos();
@@ -120,6 +169,7 @@ void parse_text(ASTList *children)
 void parse_inline(ASTList *children)
 {
     if(parse_code_span(children)) return;
+    if(parse_strong(children)) return;
     if(parse_emphasis(children)) return;
 
     parse_text(children);

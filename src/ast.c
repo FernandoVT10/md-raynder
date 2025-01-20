@@ -72,6 +72,11 @@ void ast_free_item(ASTItem *item)
             da_free(&code->content);
             free(code);
         } break;
+        case AST_STRONG_NODE: {
+            StrongNode *s = (StrongNode*)item->data;
+            ast_free_list(&s->children);
+            free(s);
+        } break;
         case AST_EMPHASIS_NODE: {
             EmphasisNode *e = (EmphasisNode*)item->data;
             ast_free_list(&e->children);
@@ -96,4 +101,16 @@ void ast_add_text(ASTList *list, const char *text)
     }
 
     string_append_str(&t->str, text);
+}
+
+void ast_catenate_lists(ASTList *dest, const ASTList *src)
+{
+    if(src->count == 0) return;
+
+    if(dest->count > 0) {
+        dest->tail = src->head;
+        dest->count += src->count;
+    } else {
+        *dest = *src;
+    }
 }

@@ -10,6 +10,7 @@ typedef enum {
     AST_HEADER_NODE,
     AST_HR_NODE,
     AST_CODE_SPAN_NODE,
+    AST_STRONG_NODE,
     AST_EMPHASIS_NODE,
 } ASTNodeType;
 
@@ -47,6 +48,7 @@ typedef struct {
     String content;
 } CodeSpanNode;
 
+typedef ParentNode StrongNode;
 typedef ParentNode EmphasisNode;
 
 ASTItem *ast_create_item(ASTNodeType type, void *data);
@@ -55,5 +57,6 @@ void ast_list_create_and_add(ASTList *list, ASTNodeType type, void *data); // cr
 void ast_free_list(ASTList *list);
 void ast_free_item(ASTItem *item);
 void ast_add_text(ASTList *list, const char *text); // Adds or catenates (if the last item of the list is a text node) a text node
+void ast_catenate_lists(ASTList *dest, const ASTList *src); // Adds the elements of the src list to the dest list
 
 #endif

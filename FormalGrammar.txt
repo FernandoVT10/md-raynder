@@ -23,6 +23,10 @@ Ticks3 -> "```" !'`'
 Ticks4 -> "````" !'`'
 Ticks5 -> "`````" !'`'
 
+Strong -> StrongStar | StrongUnderscore
+StrongStar -> "**" !SpaceChar (!"**" Inline)+ !SpaceChar "**"
+StrongUnderscore -> "__" !SpaceChar (!"__" Inline)+ !SpaceChar "__"
+
 Emphasis -> EmphasisStar | EmphasisUnderscore
 EmphasisStar -> '*' !SpaceChar (!'*' Inline)+ !SpaceChar '*'
 EmphasisUnderscore -> '_' !SpaceChar (!'_' Inline)+  !SpaceChar '_'

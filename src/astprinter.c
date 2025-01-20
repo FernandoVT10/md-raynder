@@ -62,6 +62,12 @@ void print_item(ASTItem *item, int spaces)
                 printf("TEXT(%s)\n", string_dump(code->content));
             print_close_tag(spaces);
         } break;
+        case AST_STRONG_NODE: {
+            StrongNode *s = (StrongNode*)item->data;
+            print_open_tag("STRONG", spaces);
+                print_list(s->children, spaces);
+            print_close_tag(spaces);
+        } break;
         case AST_EMPHASIS_NODE: {
             EmphasisNode *e = (EmphasisNode*)item->data;
             print_open_tag("EMPHASIS", spaces);
