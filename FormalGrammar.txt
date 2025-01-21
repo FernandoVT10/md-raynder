@@ -31,8 +31,12 @@ Emphasis -> EmphasisStar | EmphasisUnderscore
 EmphasisStar -> '*' !SpaceChar (!'*' Inline)+ !SpaceChar '*'
 EmphasisUnderscore -> '_' !SpaceChar (!'_' Inline)+  !SpaceChar '_'
 
+Link -> LinkText LinkDest?
+LinkText -> '[' (!']' Inline)+ ']'
+LinkDest -> '(' (!')' .)+ ')'
+
 SpaceChar -> ' ' | '\t'
 Terminal -> NewLine | EOF
 NewLine -> '\n'
 EOF -> !.
-Inline -> Str | CodeSpan | Emphasis
+Inline -> Str | CodeSpan | Emphasis | Strong | Link

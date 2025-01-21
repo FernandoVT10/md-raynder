@@ -12,6 +12,7 @@ typedef enum {
     AST_CODE_SPAN_NODE,
     AST_STRONG_NODE,
     AST_EMPHASIS_NODE,
+    AST_LINK_NODE,
 } ASTNodeType;
 
 typedef struct ASTItem ASTItem;
@@ -50,6 +51,11 @@ typedef struct {
 
 typedef ParentNode StrongNode;
 typedef ParentNode EmphasisNode;
+
+typedef struct {
+    ASTList text;
+    String dest;
+} LinkNode;
 
 ASTItem *ast_create_item(ASTNodeType type, void *data);
 void ast_add_item(ASTList *list, ASTItem *item); // adds and ASTItem to an ASTList

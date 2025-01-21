@@ -82,6 +82,12 @@ void ast_free_item(ASTItem *item)
             ast_free_list(&e->children);
             free(e);
         } break;
+        case AST_LINK_NODE: {
+            LinkNode *link = (LinkNode*)item->data;
+            ast_free_list(&link->text);
+            da_free(&link->dest);
+            free(link);
+        } break;
         case AST_HR_NODE:
             break;
     }

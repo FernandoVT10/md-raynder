@@ -69,6 +69,11 @@ char *string_dump(String str)
     return res;
 }
 
+void string_free(String *str)
+{
+    da_free(str);
+}
+
 void *allocate(size_t size)
 {
     void *ptr = malloc(size);

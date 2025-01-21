@@ -74,6 +74,19 @@ void print_item(ASTItem *item, int spaces)
                 print_list(e->children, spaces);
             print_close_tag(spaces);
         } break;
+        case AST_LINK_NODE: {
+            LinkNode *link = (LinkNode*)item->data;
+            print_open_tag("LINK", spaces);
+                print_open_tag("LINK_TEXT", spaces + 4);
+                    print_list(link->text, spaces + 4);
+                print_close_tag(spaces + 4);
+
+            if(link->dest.count > 0) {
+                print_spaces(spaces + 4);
+                printf("DEST(%s)\n", string_dump(link->dest));
+            }
+            print_close_tag(spaces);
+        } break;
     }
 }
 

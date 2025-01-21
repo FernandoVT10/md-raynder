@@ -149,6 +149,67 @@ bool parse_emphasis(ASTList *children)
     return true;
 }
 
+bool parse_link_text(ASTList *link_text)
+{
+    if(!lexer_match('[')) {
+        return false;
+    }
+
+    while(!lexer_is_next_terminal() && lexer_peek() != ']') {
+        parse_inline(link_text);
+    }
+
+    if(link_text->count == 0 || !lexer_match(']')) {
+        return false;
+    }
+
+    return true;
+}
+
+bool parse_link_dest(String *dest)
+{
+    if(!lexer_match('(')) return false;
+
+    while(!lexer_is_next_terminal() && lexer_peek() != ')') {
+        string_append_char(dest, lexer_consume());
+    }
+
+    if(!lexer_match(')')) {
+        return false;
+    }
+
+    return true;
+}
+
+bool parse_link(ASTList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+    ASTList link_text = {0};
+
+    if(!parse_link_text(&link_text)) {
+        lexer_set_cur_pos(start_pos);
+        ast_free_list(&link_text);
+        return false;
+    }
+
+    String dest = {0};
+
+    start_pos = lexer_get_cur_pos();
+    if(!parse_link_dest(&dest)) {
+        dest.count = 0;
+        string_free(&dest);
+        lexer_set_cur_pos(start_pos);
+    }
+
+    LinkNode *link = allocate(sizeof(LinkNode));
+    link->text = link_text;
+    if(dest.count > 0) {
+        link->dest = dest;
+    }
+    ast_list_create_and_add(children, AST_LINK_NODE, link);
+    return true;
+}
+
 void parse_text(ASTList *children)
 {
     ASTItem *last_item = children->tail;
@@ -171,6 +232,7 @@ void parse_inline(ASTList *children)
     if(parse_code_span(children)) return;
     if(parse_strong(children)) return;
     if(parse_emphasis(children)) return;
+    if(parse_link(children)) return;
 
     parse_text(children);
 }
