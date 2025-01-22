@@ -1,9 +1,8 @@
 Formal Grammar
 
-Document -> Block | ContainerBlock
+Document -> Block+
 
-Block -> HorizontalRule | AtxHeading
-ContainerBlock -> Blockquote
+Block -> Blockquote | HorizontalRule | AtxHeading
 
 HorizontalRule -> SpaceChar* ( '*' SpaceChar* '*' SpaceChar* '*' (SpaceChar* '*')*
                              | '-' SpaceChar* '-' SpaceChar* '-' (SpaceChar* '-')*

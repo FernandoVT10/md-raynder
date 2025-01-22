@@ -268,6 +268,27 @@ void parse_inline(ASTList *children)
     parse_text(children);
 }
 
+bool parse_blockquote(ASTList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+    ASTList q_children = {0};
+
+    while(lexer_match('>')) {
+        lexer_consume_whitespaces();
+        parse_block(&q_children);
+    }
+
+    if(q_children.count == 0) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    BlockquoteNode *q = allocate(sizeof(BlockquoteNode));
+    q->children = q_children;
+    ast_list_create_and_add(children, AST_BLOCKQUOTE_NODE, q);
+    return true;
+}
+
 // returns true when an atx closing sequence is found
 // NOTE: this function consumes all the characters that are part
 // of the closing sequence when found
@@ -373,36 +394,9 @@ void parse_paragraph(ASTList *children)
     lexer_match('\n');
 }
 
-bool parse_blockquote(ASTList *children)
-{
-    int start_pos = lexer_get_cur_pos();
-    ASTList q_children = {0};
-
-    while(lexer_match('>')) {
-        lexer_consume_whitespaces();
-        parse_block(&q_children);
-    }
-
-    if(q_children.count == 0) {
-        lexer_set_cur_pos(start_pos);
-        return false;
-    }
-
-    BlockquoteNode *q = allocate(sizeof(BlockquoteNode));
-    q->children = q_children;
-    ast_list_create_and_add(children, AST_BLOCKQUOTE_NODE, q);
-    return true;
-}
-
-bool parse_container_block(ASTList *children)
-{
-    if(parse_blockquote(children)) return true;
-
-    return false;
-}
-
 void parse_block(ASTList *children)
 {
+    if(parse_blockquote(children)) return;
     if(parse_atx_heading(children)) return;
     if(parse_horizontal_rule(children)) return;
 
@@ -414,9 +408,7 @@ DocumentNode *parse_document()
     DocumentNode *doc = allocate(sizeof(DocumentNode));
 
     while(!lexer_is_at_end()) {
-        if(!parse_container_block(&doc->children)) {
-            parse_block(&doc->children);
-        }
+        parse_block(&doc->children);
         while(lexer_match('\n'));
     }
 
