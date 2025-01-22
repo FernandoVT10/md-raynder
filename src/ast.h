@@ -14,6 +14,8 @@ typedef enum {
     AST_EMPHASIS_NODE,
     AST_LINK_NODE,
     AST_IMAGE_NODE,
+    AST_BLOCKQUOTE_NODE,
+    AST_SB_NODE, // soft-break node
 } ASTNodeType;
 
 typedef struct ASTItem ASTItem;
@@ -62,6 +64,8 @@ typedef struct {
     String desc;
     String uri;
 } ImageNode;
+
+typedef ParentNode BlockquoteNode;
 
 ASTItem *ast_create_item(ASTNodeType type, void *data);
 void ast_add_item(ASTList *list, ASTItem *item); // adds and ASTItem to an ASTList

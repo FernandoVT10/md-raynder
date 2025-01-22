@@ -13,6 +13,7 @@
 #define MAX_BACKTICK_COUNT 5
 
 void parse_inline(ASTList *children);
+void parse_block(ASTList *children);
 
 bool parse_code_span(ASTList *children)
 {
@@ -353,13 +354,51 @@ bool parse_horizontal_rule(ASTList *children)
 
 void parse_paragraph(ASTList *children)
 {
-    ParagraphNode *p = allocate(sizeof(ParagraphNode));
+    ASTItem *last_item = children->tail;
+    ParagraphNode *p;
+
+    if(last_item != NULL && last_item->type == AST_PARAGRAPH_NODE) {
+        p = (ParagraphNode*)last_item->data;
+        // add soft-break if we reuse the same paragraph node
+        ast_list_create_and_add(&p->children, AST_SB_NODE, NULL);
+    } else {
+        p = allocate(sizeof(ParagraphNode));
+        ast_list_create_and_add(children, AST_PARAGRAPH_NODE, p);
+    }
 
     while(!lexer_is_next_terminal()) {
         parse_inline(&p->children);
     }
 
-    ast_list_create_and_add(children, AST_PARAGRAPH_NODE, p);
+    lexer_match('\n');
+}
+
+bool parse_blockquote(ASTList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+    ASTList q_children = {0};
+
+    while(lexer_match('>')) {
+        lexer_consume_whitespaces();
+        parse_block(&q_children);
+    }
+
+    if(q_children.count == 0) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    BlockquoteNode *q = allocate(sizeof(BlockquoteNode));
+    q->children = q_children;
+    ast_list_create_and_add(children, AST_BLOCKQUOTE_NODE, q);
+    return true;
+}
+
+bool parse_container_block(ASTList *children)
+{
+    if(parse_blockquote(children)) return true;
+
+    return false;
 }
 
 void parse_block(ASTList *children)
@@ -375,7 +414,9 @@ DocumentNode *parse_document()
     DocumentNode *doc = allocate(sizeof(DocumentNode));
 
     while(!lexer_is_at_end()) {
-        parse_block(&doc->children);
+        if(!parse_container_block(&doc->children)) {
+            parse_block(&doc->children);
+        }
         while(lexer_match('\n'));
     }
 

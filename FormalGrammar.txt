@@ -1,6 +1,9 @@
 Formal Grammar
 
+Document -> Block | ContainerBlock
+
 Block -> HorizontalRule | AtxHeading
+ContainerBlock -> Blockquote
 
 HorizontalRule -> SpaceChar* ( '*' SpaceChar* '*' SpaceChar* '*' (SpaceChar* '*')*
                              | '-' SpaceChar* '-' SpaceChar* '-' (SpaceChar* '-')*
@@ -38,6 +41,8 @@ Image -> ImageDesc LinkDest?
 ImageDesc -> "![" (!']' .)+ ']'
 
 LinkDest -> '(' (!')' .)+ ')'
+
+Blockquote -> ('>' ' '? Block)+
 
 SpaceChar -> ' ' | '\t'
 Terminal -> NewLine | EOF

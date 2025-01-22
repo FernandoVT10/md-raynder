@@ -100,6 +100,16 @@ void print_item(ASTItem *item, int spaces)
             }
             print_close_tag(spaces);
         } break;
+        case AST_BLOCKQUOTE_NODE: {
+            BlockquoteNode *q = (BlockquoteNode*)item->data;
+            print_open_tag("BLOCKQUOTE", spaces);
+                print_list(q->children, spaces);
+            print_close_tag(spaces);
+        } break;
+        case AST_SB_NODE: {
+            print_spaces(spaces);
+            printf("(SOFT_BREAK)\n");
+        } break;
     }
 }
 

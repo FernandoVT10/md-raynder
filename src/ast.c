@@ -94,6 +94,12 @@ void ast_free_item(ASTItem *item)
             string_free(&img->uri);
             free(img);
         } break;
+        case AST_BLOCKQUOTE_NODE: {
+            BlockquoteNode *q = (BlockquoteNode*)item->data;
+            ast_free_list(&q->children);
+            free(q);
+        } break;
+        case AST_SB_NODE:
         case AST_HR_NODE:
             break;
     }
