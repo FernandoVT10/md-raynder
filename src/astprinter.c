@@ -87,6 +87,19 @@ void print_item(ASTItem *item, int spaces)
             }
             print_close_tag(spaces);
         } break;
+        case AST_IMAGE_NODE: {
+            ImageNode *img = (ImageNode*)item->data;
+            print_open_tag("IMAGE", spaces);
+                print_spaces(spaces + 4);
+                printf("DESCRIPTION(%s)\n", string_dump(img->desc));
+
+
+            if(img->uri.count > 0) {
+                print_spaces(spaces + 4);
+                printf("URI(%s)\n", string_dump(img->uri));
+            }
+            print_close_tag(spaces);
+        } break;
     }
 }
 

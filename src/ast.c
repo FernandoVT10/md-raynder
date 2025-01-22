@@ -88,6 +88,12 @@ void ast_free_item(ASTItem *item)
             da_free(&link->dest);
             free(link);
         } break;
+        case AST_IMAGE_NODE: {
+            ImageNode *img = (ImageNode*)item->data;
+            string_free(&img->desc);
+            string_free(&img->uri);
+            free(img);
+        } break;
         case AST_HR_NODE:
             break;
     }

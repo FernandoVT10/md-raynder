@@ -33,10 +33,14 @@ EmphasisUnderscore -> '_' !SpaceChar (!'_' Inline)+  !SpaceChar '_'
 
 Link -> LinkText LinkDest?
 LinkText -> '[' (!']' Inline)+ ']'
+
+Image -> ImageDesc LinkDest?
+ImageDesc -> "![" (!']' .)+ ']'
+
 LinkDest -> '(' (!')' .)+ ')'
 
 SpaceChar -> ' ' | '\t'
 Terminal -> NewLine | EOF
 NewLine -> '\n'
 EOF -> !.
-Inline -> Str | CodeSpan | Emphasis | Strong | Link
+Inline -> Str | CodeSpan | Emphasis | Strong | Link | Image

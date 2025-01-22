@@ -149,23 +149,6 @@ bool parse_emphasis(ASTList *children)
     return true;
 }
 
-bool parse_link_text(ASTList *link_text)
-{
-    if(!lexer_match('[')) {
-        return false;
-    }
-
-    while(!lexer_is_next_terminal() && lexer_peek() != ']') {
-        parse_inline(link_text);
-    }
-
-    if(link_text->count == 0 || !lexer_match(']')) {
-        return false;
-    }
-
-    return true;
-}
-
 bool parse_link_dest(String *dest)
 {
     if(!lexer_match('(')) return false;
@@ -183,10 +166,18 @@ bool parse_link_dest(String *dest)
 
 bool parse_link(ASTList *children)
 {
+    if(!lexer_match('[')) {
+        return false;
+    }
+
     int start_pos = lexer_get_cur_pos();
     ASTList link_text = {0};
 
-    if(!parse_link_text(&link_text)) {
+    while(!lexer_is_next_terminal() && lexer_peek() != ']') {
+        parse_inline(&link_text);
+    }
+
+    if(link_text.count == 0 || !lexer_match(']')) {
         lexer_set_cur_pos(start_pos);
         ast_free_list(&link_text);
         return false;
@@ -207,6 +198,43 @@ bool parse_link(ASTList *children)
         link->dest = dest;
     }
     ast_list_create_and_add(children, AST_LINK_NODE, link);
+    return true;
+}
+
+bool parse_image(ASTList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+    if(!(lexer_match('!') && lexer_match('['))) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    String desc = {0};
+
+    while(!lexer_is_next_terminal() && lexer_peek() != ']') {
+        string_append_char(&desc, lexer_consume());
+    }
+
+    if(!lexer_match(']')) {
+        string_free(&desc);
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    String uri = {0};
+    start_pos = lexer_get_cur_pos();
+    if(!parse_link_dest(&uri)) {
+        uri.count = 0;
+        string_free(&uri);
+        lexer_set_cur_pos(start_pos);
+    }
+
+    ImageNode *img = allocate(sizeof(ImageNode));
+    img->desc = desc;
+    if(uri.count > 0) {
+        img->uri = uri;
+    }
+    ast_list_create_and_add(children, AST_IMAGE_NODE, img);
     return true;
 }
 
@@ -233,6 +261,7 @@ void parse_inline(ASTList *children)
     if(parse_strong(children)) return;
     if(parse_emphasis(children)) return;
     if(parse_link(children)) return;
+    if(parse_image(children)) return;
 
     parse_text(children);
 }
