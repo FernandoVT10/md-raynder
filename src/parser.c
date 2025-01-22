@@ -166,11 +166,12 @@ bool parse_link_dest(String *dest)
 
 bool parse_link(ASTList *children)
 {
+    int start_pos = lexer_get_cur_pos();
+
     if(!lexer_match('[')) {
         return false;
     }
 
-    int start_pos = lexer_get_cur_pos();
     ASTList link_text = {0};
 
     while(!lexer_is_next_terminal() && lexer_peek() != ']') {
