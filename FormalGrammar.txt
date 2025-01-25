@@ -14,6 +14,8 @@ AtxStart -> "######" | "#####" | "####" | "###" | "##" | "#"
 AtxInline -> !Newline !AtxClosing Inline
 AtxClosing -> (SpaceChar+ '#'* SpaceChar*)
 
+Inline -> Str | CodeSpan | Emphasis | Strong | Link | Image
+
 CodeSpan -> Ticks1 (!Ticks1 !Terminal .)+ Ticks1
           | Ticks2 (!Ticks2 !Terminal .)+ Ticks2
           | Ticks3 (!Ticks3 !Terminal .)+ Ticks3
@@ -57,4 +59,5 @@ BlankLine -> SpaceChar+ Terminal
 Terminal -> NewLine | EOF
 NewLine -> '\n'
 EOF -> !.
-Inline -> Str | CodeSpan | Emphasis | Strong | Link | Image
+
+// TODO: add setext-headings, fenced blocks, and indented code
