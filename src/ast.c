@@ -47,7 +47,6 @@ void ast_free_item(ASTItem *item)
     switch(item->type) {
         case AST_DOCUMENT_NODE:
         case AST_BLOCKQUOTE_NODE:
-        case AST_LIST_NODE:
         case AST_LIST_ITEM_NODE:
         case AST_STRONG_NODE:
         case AST_EMPHASIS_NODE: {
@@ -86,6 +85,11 @@ void ast_free_item(ASTItem *item)
             string_free(&img->desc);
             string_free(&img->uri);
             free(img);
+        } break;
+        case AST_LIST_NODE: {
+            ListNode *l = (ListNode*)item->data;
+            ast_free_list(&l->children);
+            free(l);
         } break;
         case AST_SB_NODE:
         case AST_HR_NODE:

@@ -112,7 +112,10 @@ void print_item(ASTItem *item, int spaces)
         } break;
         case AST_LIST_NODE: {
             ListNode *list = (ListNode*)item->data;
-            print_open_tag("LIST", spaces);
+            const char *text = list->ordered ? "ORDERED" : "UNORDERED";
+
+            print_spaces(spaces);
+            printf("LIST(%s) {\n", text);
                 print_list(list->children, spaces);
             print_close_tag(spaces);
         } break;

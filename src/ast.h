@@ -47,7 +47,11 @@ typedef struct {
 } ParagraphNode;
 
 typedef ParentNode BlockquoteNode;
-typedef ParentNode ListNode;
+
+typedef struct {
+    ASTList children;
+    bool ordered;
+} ListNode;
 typedef ParentNode ListItemNode;
 
 typedef struct {

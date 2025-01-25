@@ -290,7 +290,7 @@ bool parse_blockquote(ASTList *children)
     return true;
 }
 
-bool parse_list_item(ASTList *items, char *marker)
+bool parse_ulist_item(ASTList *items, char *marker)
 {
     int start_pos = lexer_get_cur_pos();
     lexer_consume_whitespaces();
@@ -322,17 +322,13 @@ bool parse_list_item(ASTList *items, char *marker)
     return true;
 }
 
-bool parse_list(ASTList *children)
+bool parse_ulist(ASTList *children)
 {
-    if(parse_horizontal_rule(children)) {
-        return false;
-    }
-
     int start_pos = lexer_get_cur_pos();
     ASTList items = {0};
 
     char marker = '\0';
-    while(parse_list_item(&items, &marker));
+    while(parse_ulist_item(&items, &marker));
 
     if(items.count == 0) {
         lexer_set_cur_pos(start_pos);
@@ -341,6 +337,51 @@ bool parse_list(ASTList *children)
 
     ListNode *l = allocate(sizeof(ListNode));
     l->children = items;
+    l->ordered = false;
+    ast_list_create_and_add(children, AST_LIST_NODE, l);
+    return true;
+}
+
+bool parse_olist_item(ASTList *items)
+{
+    int start_pos = lexer_get_cur_pos();
+    lexer_consume_whitespaces();
+
+    if(!isdigit(lexer_peek())) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+    // consume all subsequent digits
+    while(isdigit(lexer_peek())) lexer_consume();
+
+    if(!(lexer_match_many(".)") && lexer_is_next_whitespace())) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    lexer_consume_whitespaces();
+
+    ListItemNode *item = allocate(sizeof(ListItemNode));
+    parse_block(&item->children);
+    ast_list_create_and_add(items, AST_LIST_ITEM_NODE, item);
+    return true;
+}
+
+bool parse_olist(ASTList *children)
+{
+    int start_pos = lexer_get_cur_pos();
+    ASTList items = {0};
+
+    while(parse_olist_item(&items));
+
+    if(items.count == 0) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    ListNode *l = allocate(sizeof(ListNode));
+    l->children = items;
+    l->ordered = true;
     ast_list_create_and_add(children, AST_LIST_NODE, l);
     return true;
 }
@@ -462,9 +503,10 @@ void parse_block(ASTList *children)
 {
     if(consume_blankline()) return;
     if(parse_blockquote(children)) return;
-    if(parse_list(children)) return;
-    if(parse_atx_heading(children)) return;
     if(parse_horizontal_rule(children)) return;
+    if(parse_ulist(children)) return;
+    if(parse_olist(children)) return;
+    if(parse_atx_heading(children)) return;
 
     parse_paragraph(children);
 }
