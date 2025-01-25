@@ -44,13 +44,16 @@ void ast_free_list(ASTList *list)
 
 void ast_free_item(ASTItem *item)
 {
-    // TODO: document, paragraph, and emphasis are the same as the ParentNode
-    // they could share the way to free them
     switch(item->type) {
-        case AST_DOCUMENT_NODE: {
-            DocumentNode *doc = (DocumentNode*)item->data;
-            ast_free_list(&doc->children);
-            free(doc);
+        case AST_DOCUMENT_NODE:
+        case AST_BLOCKQUOTE_NODE:
+        case AST_LIST_NODE:
+        case AST_LIST_ITEM_NODE:
+        case AST_STRONG_NODE:
+        case AST_EMPHASIS_NODE: {
+            ParentNode *parent = (ParentNode*)item->data;
+            ast_free_list(&parent->children);
+            free(parent);
         } break;
         case AST_PARAGRAPH_NODE: {
             ParagraphNode *p = (ParagraphNode*)item->data;
@@ -72,16 +75,6 @@ void ast_free_item(ASTItem *item)
             da_free(&code->content);
             free(code);
         } break;
-        case AST_STRONG_NODE: {
-            StrongNode *s = (StrongNode*)item->data;
-            ast_free_list(&s->children);
-            free(s);
-        } break;
-        case AST_EMPHASIS_NODE: {
-            EmphasisNode *e = (EmphasisNode*)item->data;
-            ast_free_list(&e->children);
-            free(e);
-        } break;
         case AST_LINK_NODE: {
             LinkNode *link = (LinkNode*)item->data;
             ast_free_list(&link->text);
@@ -93,21 +86,6 @@ void ast_free_item(ASTItem *item)
             string_free(&img->desc);
             string_free(&img->uri);
             free(img);
-        } break;
-        case AST_BLOCKQUOTE_NODE: {
-            BlockquoteNode *q = (BlockquoteNode*)item->data;
-            ast_free_list(&q->children);
-            free(q);
-        } break;
-        case AST_LIST_NODE: {
-            ListNode *l = (ListNode*)item->data;
-            ast_free_list(&l->children);
-            free(l);
-        } break;
-        case AST_LIST_ITEM_NODE: {
-            ListItemNode *l_item = (ListItemNode*)item->data;
-            ast_free_list(&l_item->children);
-            free(l_item);
         } break;
         case AST_SB_NODE:
         case AST_HR_NODE:
