@@ -2,7 +2,7 @@ Formal Grammar
 
 Document -> Block+
 
-Block -> Blockquote | HorizontalRule | AtxHeading
+Block -> Blockquote | HorizontalRule | AtxHeading | Paragraph
 
 HorizontalRule -> SpaceChar* ( '*' SpaceChar* '*' SpaceChar* '*' (SpaceChar* '*')*
                              | '-' SpaceChar* '-' SpaceChar* '-' (SpaceChar* '-')*
@@ -43,7 +43,15 @@ LinkDest -> '(' (!')' .)+ ')'
 
 Blockquote -> ('>' ' '? Block)+
 
+List -> !HorizontalRule (DashListItem+ | StarListItem+ | PlusListItem+)
+DashListItem -> (SpaceChar+ '-' SpaceChar+ Block)
+StarListItem -> (SpaceChar+ '*' SpaceChar+ Block)
+PlusListItem -> (SpaceChar+ '+' SpaceChar+ Block)
+
+Paragraph -> (!Terminal Inline)+ Newline?
+
 SpaceChar -> ' ' | '\t'
+BlankLine -> SpaceChar+ Terminal
 Terminal -> NewLine | EOF
 NewLine -> '\n'
 EOF -> !.

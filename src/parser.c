@@ -14,6 +14,7 @@
 
 void parse_inline(ASTList *children);
 void parse_block(ASTList *children);
+bool parse_horizontal_rule(ASTList *children);
 
 bool parse_code_span(ASTList *children)
 {
@@ -289,6 +290,61 @@ bool parse_blockquote(ASTList *children)
     return true;
 }
 
+bool parse_list_item(ASTList *items, char *marker)
+{
+    int start_pos = lexer_get_cur_pos();
+    lexer_consume_whitespaces();
+
+    if(*marker == '\0') {
+        if(!lexer_match_many("-*+")) {
+            lexer_set_cur_pos(start_pos);
+            return false;
+        }
+
+        *marker = lexer_prev();
+    } else {
+        if(!lexer_match(*marker)) {
+            lexer_set_cur_pos(start_pos);
+            return false;
+        }
+    }
+
+    if(!lexer_is_next_whitespace()) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    lexer_consume_whitespaces();
+
+    ListItemNode *item = allocate(sizeof(ListItemNode));
+    parse_block(&item->children);
+    ast_list_create_and_add(items, AST_LIST_ITEM_NODE, item);
+    return true;
+}
+
+bool parse_list(ASTList *children)
+{
+    if(parse_horizontal_rule(children)) {
+        return false;
+    }
+
+    int start_pos = lexer_get_cur_pos();
+    ASTList items = {0};
+
+    char marker = '\0';
+    while(parse_list_item(&items, &marker));
+
+    if(items.count == 0) {
+        lexer_set_cur_pos(start_pos);
+        return false;
+    }
+
+    ListNode *l = allocate(sizeof(ListNode));
+    l->children = items;
+    ast_list_create_and_add(children, AST_LIST_NODE, l);
+    return true;
+}
+
 // returns true when an atx closing sequence is found
 // NOTE: this function consumes all the characters that are part
 // of the closing sequence when found
@@ -375,28 +431,38 @@ bool parse_horizontal_rule(ASTList *children)
 
 void parse_paragraph(ASTList *children)
 {
-    ASTItem *last_item = children->tail;
-    ParagraphNode *p;
-
-    if(last_item != NULL && last_item->type == AST_PARAGRAPH_NODE) {
-        p = (ParagraphNode*)last_item->data;
-        // add soft-break if we reuse the same paragraph node
-        ast_list_create_and_add(&p->children, AST_SB_NODE, NULL);
-    } else {
-        p = allocate(sizeof(ParagraphNode));
-        ast_list_create_and_add(children, AST_PARAGRAPH_NODE, p);
-    }
+    ParagraphNode *p = allocate(sizeof(ParagraphNode));
 
     while(!lexer_is_next_terminal()) {
         parse_inline(&p->children);
     }
 
+    ast_list_create_and_add(children, AST_PARAGRAPH_NODE, p);
+
     lexer_match('\n');
+}
+
+bool consume_blankline()
+{
+    int start_pos = lexer_get_cur_pos();
+    if(lexer_prev() == '\n') {
+        lexer_consume_whitespaces();
+
+        if(lexer_match('\n')) {
+            return true;
+        } else {
+            lexer_set_cur_pos(start_pos);
+        }
+    }
+
+    return false;
 }
 
 void parse_block(ASTList *children)
 {
+    if(consume_blankline()) return;
     if(parse_blockquote(children)) return;
+    if(parse_list(children)) return;
     if(parse_atx_heading(children)) return;
     if(parse_horizontal_rule(children)) return;
 
@@ -409,7 +475,6 @@ DocumentNode *parse_document()
 
     while(!lexer_is_at_end()) {
         parse_block(&doc->children);
-        while(lexer_match('\n'));
     }
 
     return doc;

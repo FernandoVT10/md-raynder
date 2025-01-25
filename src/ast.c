@@ -99,6 +99,16 @@ void ast_free_item(ASTItem *item)
             ast_free_list(&q->children);
             free(q);
         } break;
+        case AST_LIST_NODE: {
+            ListNode *l = (ListNode*)item->data;
+            ast_free_list(&l->children);
+            free(l);
+        } break;
+        case AST_LIST_ITEM_NODE: {
+            ListItemNode *l_item = (ListItemNode*)item->data;
+            ast_free_list(&l_item->children);
+            free(l_item);
+        } break;
         case AST_SB_NODE:
         case AST_HR_NODE:
             break;
@@ -126,6 +136,8 @@ void ast_catenate_lists(ASTList *dest, const ASTList *src)
     if(src->count == 0) return;
 
     if(dest->count > 0) {
+        ASTItem *last_item = dest->tail;
+        last_item->next = src->head;
         dest->tail = src->head;
         dest->count += src->count;
     } else {

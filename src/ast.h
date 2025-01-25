@@ -1,6 +1,7 @@
 #ifndef NODES_H
 #define NODES_H
 
+#include <stdbool.h>
 #include "utils.h"
 
 typedef enum {
@@ -16,6 +17,8 @@ typedef enum {
     AST_IMAGE_NODE,
     AST_BLOCKQUOTE_NODE,
     AST_SB_NODE, // soft-break node
+    AST_LIST_NODE,
+    AST_LIST_ITEM_NODE,
 } ASTNodeType;
 
 typedef struct ASTItem ASTItem;
@@ -37,7 +40,15 @@ typedef struct {
 } ParentNode;
 
 typedef ParentNode DocumentNode;
-typedef ParentNode ParagraphNode;
+
+typedef struct {
+    ASTList children;
+    bool allow_nesting;
+} ParagraphNode;
+
+typedef ParentNode BlockquoteNode;
+typedef ParentNode ListNode;
+typedef ParentNode ListItemNode;
 
 typedef struct {
     String str;
@@ -64,8 +75,6 @@ typedef struct {
     String desc;
     String uri;
 } ImageNode;
-
-typedef ParentNode BlockquoteNode;
 
 ASTItem *ast_create_item(ASTNodeType type, void *data);
 void ast_add_item(ASTList *list, ASTItem *item); // adds and ASTItem to an ASTList
