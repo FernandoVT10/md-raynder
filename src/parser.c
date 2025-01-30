@@ -522,7 +522,7 @@ DocumentNode *parse_document()
     return doc;
 }
 
-ASTItem *parse_file(const char *file_path)
+ASTItem *parse_md_file(const char *file_path)
 {
     char *file_content = load_file_contents(file_path);
     if(file_content == NULL) return NULL;
