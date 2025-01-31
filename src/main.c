@@ -47,7 +47,8 @@ typedef struct {
     Color color;
     FontWeight weight;
     char *text;
-    Vector2 pos;
+    Rectangle rect;
+    Color bg;
 } RenderTextChunk;
 
 typedef struct {
@@ -80,6 +81,7 @@ typedef struct {
     int font_size;
     Color font_color;
     FontWeight font_weight;
+    Color font_bg;
 } RenderCtx;
 
 typedef struct {
@@ -175,12 +177,20 @@ void create_render_text_node(RenderNodes *nodes, char *text)
             render_state.draw_pos.x += space_size;
         }
 
+        Rectangle rect = {
+            .x = render_state.draw_pos.x,
+            .y = render_state.draw_pos.y,
+            .width = word_size.x,
+            .height = word_size.y,
+        };
+
         da_append(r_text, ((RenderTextChunk) {
             .size = render_state.ctx.font_size,
             .color = render_state.ctx.font_color,
             .weight = render_state.ctx.font_weight,
             .text = strdup(word),
-            .pos = render_state.draw_pos,
+            .rect = rect,
+            .bg = render_state.ctx.font_bg,
         }));
 
         render_state.draw_pos.x += word_size.x;
@@ -248,7 +258,8 @@ void create_render_node(RenderNodes *nodes, ASTItem *item)
 
             render_save_ctx();
 
-            render_state.ctx.font_color = PINK;
+            render_state.ctx.font_color = MD_BLUE;
+            render_state.ctx.font_bg = MD_BLUE_BG;
             char *text = string_dump(code->content);
             create_render_text_node(nodes, text);
             free(text);
@@ -338,10 +349,16 @@ int main(int argc, char **argv)
 
                     for(size_t i = 0; i < r_text->count; i++) {
                         RenderTextChunk chunk = r_text->items[i];
+
+                        if(!ColorIsEqual(chunk.bg, MD_TRANSPARENT)) {
+                            DrawRectangleRec(chunk.rect, chunk.bg);
+                        }
+
+                        Vector2 pos = {chunk.rect.x, chunk.rect.y};
                         DrawTextEx(
                             get_font_by_weight(chunk.weight),
                             chunk.text,
-                            chunk.pos,
+                            pos,
                             chunk.size,
                             DEFAULT_FONT_SPACING,
                             chunk.color
