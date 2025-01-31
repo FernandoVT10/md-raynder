@@ -16,6 +16,11 @@
 #define DEFAULT_FONT_SPACING 2
 #define FONT_LINE_HEIGHT 1.5
 
+#define REGULAR_FONT_PATH "./fonts/JetBrainsMono-Regular.ttf"
+#define BOLD_FONT_PATH "./fonts/JetBrainsMono-Bold.ttf"
+#define ITALIC_FONT_PATH "./fonts/JetBrainsMono-Italic.ttf"
+#define BOLD_ITALIC_FONT_PATH "./fonts/JetBrainsMono-BoldItalic.ttf"
+
 // HEADERS
 #define HEADER_1_FONT_SIZE 45
 #define HEADER_2_FONT_SIZE 40
@@ -24,20 +29,23 @@
 #define HEADER_5_FONT_SIZE 25
 #define HEADER_6_FONT_SIZE 20
 
+#define PARAGRAPH_TOP_MARGIN 10
+
+// HR
 #define HR_THICKNESS 2
-#define HR_MARGIN 10
+#define HR_TOP_MARGIN 10
 
 typedef enum {
-    MD_TEXT_REGULAR,
-    MD_TEXT_BOLD,
-    MD_TEXT_ITALIC,
-    MD_TEXT_BOLD_ITALIC,
-} TextWeight;
+    FONT_WEIGHT_REGULAR,
+    FONT_WEIGHT_BOLD,
+    FONT_WEIGHT_ITALIC,
+    FONT_WEIGHT_BOLD_ITALIC,
+} FontWeight;
 
 typedef struct {
     int size;
     Color color;
-    TextWeight weight;
+    FontWeight weight;
     char *text;
     Vector2 pos;
 } RenderTextChunk;
@@ -71,7 +79,7 @@ typedef struct {
 typedef struct {
     int font_size;
     Color font_color;
-    TextWeight font_weight;
+    FontWeight font_weight;
 } RenderCtx;
 
 typedef struct {
@@ -81,10 +89,18 @@ typedef struct {
 } RenderCtxs;
 
 typedef struct {
+    Font regular;
+    Font bold;
+    Font italic;
+    Font bold_italic;
+} RenderFonts;
+
+typedef struct {
     RenderCtx ctx;
     RenderCtxs ctxs;
     Vector2 draw_pos;
     int screen_width;
+    RenderFonts fonts;
 } RenderState;
 
 void create_render_nodes(RenderNodes *nodes, ASTList list);
@@ -98,7 +114,7 @@ RenderState render_state = {
     .ctx = {
         .font_size = DEFAULT_FONT_SIZE,
         .font_color = MD_WHITE,
-        .font_weight = MD_TEXT_REGULAR,
+        .font_weight = FONT_WEIGHT_REGULAR,
     },
 };
 
@@ -126,19 +142,31 @@ int get_header_font_size(int level)
     }
 }
 
+Font get_font_by_weight(FontWeight weight)
+{
+    switch(weight) {
+        case FONT_WEIGHT_BOLD: return render_state.fonts.bold;
+        case FONT_WEIGHT_ITALIC: return render_state.fonts.italic;
+        case FONT_WEIGHT_BOLD_ITALIC: return render_state.fonts.bold_italic;
+        case FONT_WEIGHT_REGULAR:
+        default: return render_state.fonts.regular;
+    }
+}
+
 void create_render_text_node(RenderNodes *nodes, char *text)
 {
     char *text_ptr = text;
     char *word;
 
     int font_size = render_state.ctx.font_size;
+    Font font = get_font_by_weight(render_state.ctx.font_weight);
 
     RenderTextNode *r_text = allocate(sizeof(RenderTextNode));
 
-    int space_size = MeasureTextEx(GetFontDefault(), " ", font_size, DEFAULT_FONT_SPACING).x;
+    int space_size = MeasureTextEx(font, " ", font_size, DEFAULT_FONT_SPACING).x;
 
     while((word = strsep(&text_ptr, " ")) != NULL) {
-        Vector2 word_size = MeasureTextEx(GetFontDefault(), word, font_size, DEFAULT_FONT_SPACING);
+        Vector2 word_size = MeasureTextEx(font, word, font_size, DEFAULT_FONT_SPACING);
 
         if(render_state.draw_pos.x + word_size.x > render_state.screen_width) {
             render_state.draw_pos.y += word_size.y * FONT_LINE_HEIGHT;
@@ -169,6 +197,10 @@ void create_render_node(RenderNodes *nodes, ASTItem *item)
     switch(item->type) {
         case AST_DOCUMENT_NODE:
         case AST_PARAGRAPH_NODE: {
+            if(render_state.draw_pos.y > 0) {
+                render_state.draw_pos.y += PARAGRAPH_TOP_MARGIN;
+            }
+
             ParentNode *parent = (ParentNode*)item->data;
             create_render_nodes(nodes, parent->children);
             render_state.draw_pos.x = 0;
@@ -178,13 +210,14 @@ void create_render_node(RenderNodes *nodes, ASTItem *item)
             HeaderNode *h = (HeaderNode*)item->data;
 
             int font_size = get_header_font_size(h->level);
-            {
-                render_save_ctx();
-                render_state.ctx.font_size = font_size;
-                render_state.ctx.font_color = MD_BLUE;
-                create_render_nodes(nodes, h->children);
-                render_restore_ctx();
-            }
+
+            render_save_ctx();
+
+            render_state.ctx.font_size = font_size;
+            render_state.ctx.font_color = MD_BLUE;
+            create_render_nodes(nodes, h->children);
+
+            render_restore_ctx();
 
             render_state.draw_pos.x = 0;
             render_state.draw_pos.y += font_size;
@@ -196,9 +229,11 @@ void create_render_node(RenderNodes *nodes, ASTItem *item)
             free(text);
             break;
         case AST_HR_NODE: {
+            render_state.draw_pos.y += HR_TOP_MARGIN;
+
             RenderHRNode *hr = allocate(sizeof(RenderHRNode));
             hr->pos.x = 0;
-            hr->pos.y = render_state.draw_pos.y + HR_MARGIN;
+            hr->pos.y = render_state.draw_pos.y;
 
             da_append(nodes, ((RenderNode) {
                 .type = RENDER_HR_NODE,
@@ -206,7 +241,7 @@ void create_render_node(RenderNodes *nodes, ASTItem *item)
             }));
 
             render_state.draw_pos.x = 0;
-            render_state.draw_pos.y += HR_THICKNESS + HR_MARGIN * 2;
+            render_state.draw_pos.y += HR_THICKNESS;
         } break;
         case AST_CODE_SPAN_NODE: {
             CodeSpanNode *code = (CodeSpanNode*)item->data;
@@ -218,6 +253,30 @@ void create_render_node(RenderNodes *nodes, ASTItem *item)
             create_render_text_node(nodes, text);
             free(text);
 
+            render_restore_ctx();
+        } break;
+        case AST_STRONG_NODE: {
+            StrongNode *strong = (StrongNode*)item->data;
+
+            render_save_ctx();
+            if(render_state.ctx.font_weight == FONT_WEIGHT_ITALIC) {
+                render_state.ctx.font_weight = FONT_WEIGHT_BOLD_ITALIC;
+            } else {
+                render_state.ctx.font_weight = FONT_WEIGHT_BOLD;
+            }
+            create_render_nodes(nodes, strong->children);
+            render_restore_ctx();
+        } break;
+        case AST_EMPHASIS_NODE: {
+            EmphasisNode *em = (EmphasisNode*)item->data;
+
+            render_save_ctx();
+            if(render_state.ctx.font_weight == FONT_WEIGHT_BOLD) {
+                render_state.ctx.font_weight = FONT_WEIGHT_BOLD_ITALIC;
+            } else {
+                render_state.ctx.font_weight = FONT_WEIGHT_ITALIC;
+            }
+            create_render_nodes(nodes, em->children);
             render_restore_ctx();
         } break;
         default: break;
@@ -232,6 +291,14 @@ void create_render_nodes(RenderNodes *nodes, ASTList list)
         create_render_node(nodes, item);
         item = item->next;
     }
+}
+
+void load_fonts()
+{
+    render_state.fonts.regular = LoadFontEx(REGULAR_FONT_PATH, 20, NULL, 0);
+    render_state.fonts.bold = LoadFontEx(BOLD_FONT_PATH, 20, NULL, 0);
+    render_state.fonts.italic = LoadFontEx(ITALIC_FONT_PATH, 20, NULL, 0);
+    render_state.fonts.bold_italic = LoadFontEx(BOLD_ITALIC_FONT_PATH, 20, NULL, 0);
 }
 
 int main(int argc, char **argv)
@@ -251,8 +318,9 @@ int main(int argc, char **argv)
 
     InitWindow(1280, 720, "MD Raynder");
 
-    RenderNodes nodes = {0};
+    load_fonts();
 
+    RenderNodes nodes = {0};
     render_state.screen_width = GetScreenWidth();
 
     create_render_node(&nodes, md_doc);
@@ -271,7 +339,7 @@ int main(int argc, char **argv)
                     for(size_t i = 0; i < r_text->count; i++) {
                         RenderTextChunk chunk = r_text->items[i];
                         DrawTextEx(
-                            GetFontDefault(),
+                            get_font_by_weight(chunk.weight),
                             chunk.text,
                             chunk.pos,
                             chunk.size,
