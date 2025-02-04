@@ -36,34 +36,9 @@
 #define HR_TOP_MARGIN 10
 
 typedef enum {
-    FONT_WEIGHT_REGULAR,
-    FONT_WEIGHT_BOLD,
-    FONT_WEIGHT_ITALIC,
-    FONT_WEIGHT_BOLD_ITALIC,
-} FontWeight;
-
-typedef struct {
-    int size;
-    Color color;
-    FontWeight weight;
-    char *text;
-    Rectangle rect;
-    Color bg;
-} RenderTextChunk;
-
-typedef struct {
-    RenderTextChunk *items;
-    size_t count;
-    size_t capacity;
-} RenderTextNode;
-
-typedef struct {
-    Vector2 pos;
-} RenderHRNode;
-
-typedef enum {
     RENDER_TEXT_NODE,
     RENDER_HR_NODE,
+    RENDER_LINK_NODE,
 } RenderNodeType;
 
 typedef struct {
@@ -76,6 +51,37 @@ typedef struct {
     size_t count;
     size_t capacity;
 } RenderNodes;
+
+typedef enum {
+    FONT_WEIGHT_REGULAR,
+    FONT_WEIGHT_BOLD,
+    FONT_WEIGHT_ITALIC,
+    FONT_WEIGHT_BOLD_ITALIC,
+} FontWeight;
+
+typedef struct {
+    String text;
+    Rectangle rect;
+} RenderTextChunk;
+
+typedef struct {
+    RenderTextChunk *items;
+    size_t count;
+    size_t capacity;
+    Color bg;
+    Color color;
+    int size;
+    FontWeight weight;
+} RenderTextNode;
+
+typedef struct {
+    Vector2 pos;
+} RenderHRNode;
+
+typedef struct {
+    RenderNodes nodes;
+    bool hovered;
+} RenderLinkNode;
 
 typedef struct {
     int font_size;
@@ -117,6 +123,7 @@ RenderState render_state = {
         .font_size = DEFAULT_FONT_SIZE,
         .font_color = MD_WHITE,
         .font_weight = FONT_WEIGHT_REGULAR,
+        .font_bg = MD_TRANSPARENT,
     },
 };
 
@@ -155,45 +162,72 @@ Font get_font_by_weight(FontWeight weight)
     }
 }
 
+char* get_next_word(char **str_ptr)
+{
+    char* str = *str_ptr;
+    char* found_ptr = strchr(*str_ptr, ' ');
+
+    if(found_ptr == NULL) {
+        if(strlen(str) == 0) {
+            return NULL;
+        }
+
+        *str_ptr += strlen(str);
+        return strdup(str);
+    }
+
+    *str_ptr = found_ptr + 1;
+    return strndup(str, found_ptr - str + 1);
+}
+
 void create_render_text_node(RenderNodes *nodes, char *text)
 {
+    RenderTextNode *r_text = allocate(sizeof(RenderTextNode));
+    r_text->bg = render_state.ctx.font_bg;
+    r_text->color = render_state.ctx.font_color;
+    r_text->size = render_state.ctx.font_size;
+    r_text->weight = render_state.ctx.font_weight;
+
+    RenderTextChunk chunk = {0};
+    chunk.rect = (Rectangle) {
+        .x = render_state.draw_pos.x,
+        .y = render_state.draw_pos.y,
+    };
+
     char *text_ptr = text;
     char *word;
 
-    int font_size = render_state.ctx.font_size;
     Font font = get_font_by_weight(render_state.ctx.font_weight);
+    int font_size = render_state.ctx.font_size;
 
-    RenderTextNode *r_text = allocate(sizeof(RenderTextNode));
-
-    int space_size = MeasureTextEx(font, " ", font_size, DEFAULT_FONT_SPACING).x;
-
-    while((word = strsep(&text_ptr, " ")) != NULL) {
+    while((word = get_next_word(&text_ptr)) != NULL) {
         Vector2 word_size = MeasureTextEx(font, word, font_size, DEFAULT_FONT_SPACING);
 
         if(render_state.draw_pos.x + word_size.x > render_state.screen_width) {
+            da_append(r_text, chunk);
+
             render_state.draw_pos.y += word_size.y * FONT_LINE_HEIGHT;
             render_state.draw_pos.x = 0;
-        } else if(render_state.draw_pos.x > 0) {
-            render_state.draw_pos.x += space_size;
+
+            chunk.rect = (Rectangle) {
+                .x = render_state.draw_pos.x,
+                .y = render_state.draw_pos.y,
+            };
+            chunk.text.count = 0;
+            chunk.text.capacity = 0;
+            chunk.text.items = NULL;
         }
 
-        Rectangle rect = {
-            .x = render_state.draw_pos.x,
-            .y = render_state.draw_pos.y,
-            .width = word_size.x,
-            .height = word_size.y,
-        };
+        string_append_str(&chunk.text, word);
+        free(word);
+        chunk.rect.width += word_size.x + DEFAULT_FONT_SPACING;
+        chunk.rect.height = word_size.y;
 
-        da_append(r_text, ((RenderTextChunk) {
-            .size = render_state.ctx.font_size,
-            .color = render_state.ctx.font_color,
-            .weight = render_state.ctx.font_weight,
-            .text = strdup(word),
-            .rect = rect,
-            .bg = render_state.ctx.font_bg,
-        }));
+        render_state.draw_pos.x += word_size.x + DEFAULT_FONT_SPACING;
+    }
 
-        render_state.draw_pos.x += word_size.x;
+    if(chunk.text.count > 0) {
+        da_append(r_text, chunk);
     }
 
     da_append(nodes, ((RenderNode) {
@@ -235,7 +269,9 @@ void create_render_node(RenderNodes *nodes, ASTItem *item)
         case AST_TEXT_NODE:
             TextNode *t = (TextNode*)item->data;
             char *text = string_dump(t->str);
+
             create_render_text_node(nodes, text);
+
             free(text);
             break;
         case AST_HR_NODE: {
@@ -312,6 +348,85 @@ void load_fonts()
     render_state.fonts.bold_italic = LoadFontEx(BOLD_ITALIC_FONT_PATH, 20, NULL, 0);
 }
 
+bool is_any_node_hovered(RenderNodes nodes)
+{
+    Vector2 mouse_pos = GetMousePosition();
+
+    for(size_t i = 0; i < nodes.count; i++) {
+        RenderNode node = nodes.items[i];
+
+        switch(node.type) {
+            case RENDER_TEXT_NODE: {
+                RenderTextNode *text = (RenderTextNode*)node.data;
+
+                for(size_t i = 0; i < text->count; i++) {
+                    RenderTextChunk chunk = text->items[i];
+
+                    if(CheckCollisionPointRec(mouse_pos, chunk.rect)) {
+                        return true;
+                    }
+                }
+            } break;
+            default: false;
+        }
+    }
+
+    return false;
+}
+
+void render_nodes(RenderNodes nodes)
+{
+    for(size_t i = 0; i < nodes.count; i++) {
+        RenderNode node = nodes.items[i];
+
+        switch(node.type) {
+            case RENDER_TEXT_NODE: {
+                RenderTextNode *text = (RenderTextNode*)node.data;
+
+                for(size_t i = 0; i < text->count; i++) {
+                    RenderTextChunk chunk = text->items[i];
+
+                    if(!ColorIsEqual(text->bg, MD_TRANSPARENT)) {
+                        DrawRectangleRec(chunk.rect, text->bg);
+                    }
+
+                    char *l_text = string_dump(chunk.text);
+                    Vector2 pos = {chunk.rect.x, chunk.rect.y};
+                    DrawTextEx(
+                        get_font_by_weight(text->weight),
+                        l_text,
+                        pos,
+                        text->size,
+                        DEFAULT_FONT_SPACING,
+                        text->color
+                    );
+
+                    free(l_text);
+                }
+            } break;
+            case RENDER_HR_NODE: {
+                RenderHRNode *hr = (RenderHRNode*)node.data;
+                Vector2 endPos = {render_state.screen_width, hr->pos.y};
+                DrawLineEx(hr->pos, endPos, HR_THICKNESS, MD_BLUE);
+            } break;
+            case RENDER_LINK_NODE: {
+                RenderLinkNode *link = (RenderLinkNode*)node.data;
+                render_nodes(link->nodes);
+
+                if(is_any_node_hovered(link->nodes)) {
+                    if(!link->hovered) {
+                        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+                        link->hovered = true;
+                    }
+                } else if(link->hovered) {
+                    SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+                    link->hovered = false;
+                }
+            } break;
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     if(argc != 2) {
@@ -340,40 +455,7 @@ int main(int argc, char **argv)
         BeginDrawing();
         ClearBackground(MD_BLACK);
 
-        for(size_t i = 0; i < nodes.count; i++) {
-            RenderNode node = nodes.items[i];
-
-            switch(node.type) {
-                case RENDER_TEXT_NODE: {
-                    RenderTextNode *r_text = (RenderTextNode*)node.data;
-
-                    for(size_t i = 0; i < r_text->count; i++) {
-                        RenderTextChunk chunk = r_text->items[i];
-
-                        if(!ColorIsEqual(chunk.bg, MD_TRANSPARENT)) {
-                            DrawRectangleRec(chunk.rect, chunk.bg);
-                        }
-
-                        Vector2 pos = {chunk.rect.x, chunk.rect.y};
-                        DrawTextEx(
-                            get_font_by_weight(chunk.weight),
-                            chunk.text,
-                            pos,
-                            chunk.size,
-                            DEFAULT_FONT_SPACING,
-                            chunk.color
-                        );
-                    }
-                    // Vector2 size = MeasureTextEx(GetFontDefault(), text->content, text->size, spacing);
-                    // DrawRectangle(text->pos.x, text->pos.y, size.x, size.y, text->bg);
-                } break;
-                case RENDER_HR_NODE: {
-                    RenderHRNode *hr = (RenderHRNode*)node.data;
-                    Vector2 endPos = {render_state.screen_width, hr->pos.y};
-                    DrawLineEx(hr->pos, endPos, HR_THICKNESS, MD_BLUE);
-                } break;
-            }
-        }
+        render_nodes(nodes);
 
         EndDrawing();
     }
