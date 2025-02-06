@@ -3,6 +3,6 @@
 
 #include "ast.h"
 
-ASTItem *parse_file(const char *file_path);
+ASTItem *parse_md_file(const char *file_path);
 
 #endif // PARSER_H

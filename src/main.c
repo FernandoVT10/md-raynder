@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
     const char *file_path = argv[1];
 
-    ASTItem *doc_item = parse_file(file_path);
+    ASTItem *doc_item = parse_md_file(file_path);
 
     if(doc_item == NULL) {
         return -1;
