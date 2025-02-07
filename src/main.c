@@ -8,6 +8,8 @@
 // Colors
 #define COLOR_WHITE CLITERAL(Color){221, 221, 244, 255}
 #define COLOR_BLUE CLITERAL(Color){133, 170, 249, 255}
+#define COLOR_BLUE_BG CLITERAL(Color){133, 170, 249, 50}
+#define COLOR_TRANSPARENT CLITERAL(Color){0}
 
 // Fonts Config
 #define REGULAR_FONT_PATH "./fonts/JetBrainsMono-Regular.ttf"
@@ -18,6 +20,8 @@
 #define DEFAULT_FONT_SIZE 20
 #define DEFAULT_FONT_SPACING 2
 #define FONT_LINE_HEIGHT 1.5
+
+#define DEFAULT_HORIZONTAL_RULE_THICKNESS 3
 
 // Header Sizes
 const int HEADER_FONT_SIZES[6] = {
@@ -48,17 +52,26 @@ typedef struct {
     int size;
     Color color;
     FontWeight weight;
+    Color bg;
 } RETextNode;
+
+typedef struct {
+    Vector2 start_pos;
+    Vector2 end_pos;
+    float thickness;
+    Color color;
+} RELineNode;
 
 typedef enum {
     RENDER_TEXT_NODE,
+    RENDER_LINE_NODE,
 } RenderNodeType;
 
 typedef struct {
     int font_size;
     Color font_color;
     FontWeight font_weight;
-    // Color font_bg;
+    Color font_bg;
 } REParserCtx;
 
 typedef struct {
@@ -91,6 +104,7 @@ RenderState render_state = {
             .font_color = COLOR_WHITE,
             .font_weight = FONT_WEIGHT_REGULAR,
             .font_size = DEFAULT_FONT_SIZE,
+            .font_bg = COLOR_TRANSPARENT,
         },
     },
 };
@@ -154,6 +168,7 @@ void create_render_text_node(LList *list, String str)
     text->color = render_state.parser.ctx.font_color;
     text->size = render_state.parser.ctx.font_size;
     text->weight = render_state.parser.ctx.font_weight;
+    text->bg = render_state.parser.ctx.font_bg;
     text->chunks = llist_create();
 
     int str_pos = 0;
@@ -246,6 +261,9 @@ void parse_ast_item(LList *list, ASTItem *item)
         case AST_PARAGRAPH_NODE: {
             ParentNode *parent = (ParentNode*)item->data;
             parse_ast_list(list, parent->children);
+
+            render_state.parser.draw_pos.x = 0;
+            render_state.parser.draw_pos.y += render_state.parser.ctx.font_size;
         } break;
         case AST_HEADER_NODE: {
             HeaderNode *h = (HeaderNode*)item->data;
@@ -277,6 +295,44 @@ void parse_ast_item(LList *list, ASTItem *item)
             parse_ast_list(list, strong->children);
             re_parser_restore_ctx();
         } break;
+        case AST_EMPHASIS_NODE: {
+            EmphasisNode *em = (EmphasisNode*)item->data;
+
+            re_parser_save_ctx();
+            if(render_state.parser.ctx.font_weight == FONT_WEIGHT_BOLD) {
+                render_state.parser.ctx.font_weight = FONT_WEIGHT_BOLD_ITALIC;
+            } else {
+                render_state.parser.ctx.font_weight = FONT_WEIGHT_ITALIC;
+            }
+            parse_ast_list(list, em->children);
+            re_parser_restore_ctx();
+        } break;
+        case AST_HR_NODE: {
+            RELineNode *line = allocate(sizeof(RELineNode));
+            line->start_pos = (Vector2) {
+                .x = render_state.parser.draw_pos.x,
+                .y = render_state.parser.draw_pos.y,
+            };
+            line->end_pos = (Vector2) {
+                .x = render_state.screen_width,
+                .y = render_state.parser.draw_pos.y,
+            };
+            line->thickness = DEFAULT_HORIZONTAL_RULE_THICKNESS;
+            line->color = COLOR_BLUE;
+            llist_append_node(list, RENDER_LINE_NODE, line);
+
+            render_state.parser.draw_pos.x = 0;
+            render_state.parser.draw_pos.y += line->thickness;
+        } break;
+        case AST_CODE_SPAN_NODE: {
+            CodeSpanNode *code = (CodeSpanNode*)item->data;
+
+            re_parser_save_ctx();
+            render_state.parser.ctx.font_color = COLOR_BLUE;
+            render_state.parser.ctx.font_bg = COLOR_BLUE_BG;
+            create_render_text_node(list, code->content);
+            re_parser_restore_ctx();
+        } break;
         default: break;
     }
 }
@@ -298,6 +354,10 @@ void draw_text_node(RETextNode *text)
 
         Vector2 pos = {chunk->rect.x, chunk->rect.y};
 
+        if(!ColorIsEqual(text->bg, COLOR_TRANSPARENT)) {
+            DrawRectangleRec(chunk->rect, text->bg);
+        }
+
         DrawTextEx(
             get_font_by_weight(text->weight),
             chunk->text,
@@ -316,8 +376,11 @@ void draw_render_node(LNode *node)
     switch((RenderNodeType) node->type) {
         case RENDER_TEXT_NODE: {
             RETextNode *text = (RETextNode*)node->data;
-
             draw_text_node(text);
+        } break;
+        case RENDER_LINE_NODE: {
+            RELineNode *line = (RELineNode*)node->data;
+            DrawLineEx(line->start_pos, line->end_pos, line->thickness, line->color);
         } break;
     }
 }
@@ -335,10 +398,10 @@ void draw_render_list(LList *tree)
 
 void load_fonts()
 {
-    render_state.fonts.regular = LoadFontEx(REGULAR_FONT_PATH, 20, NULL, 0);
-    render_state.fonts.bold = LoadFontEx(BOLD_FONT_PATH, 20, NULL, 0);
-    render_state.fonts.italic = LoadFontEx(ITALIC_FONT_PATH, 20, NULL, 0);
-    render_state.fonts.bold_italic = LoadFontEx(BOLD_ITALIC_FONT_PATH, 20, NULL, 0);
+    render_state.fonts.regular = LoadFontEx(REGULAR_FONT_PATH, 45, NULL, 0);
+    render_state.fonts.bold = LoadFontEx(BOLD_FONT_PATH, 45, NULL, 0);
+    render_state.fonts.italic = LoadFontEx(ITALIC_FONT_PATH, 45, NULL, 0);
+    render_state.fonts.bold_italic = LoadFontEx(BOLD_ITALIC_FONT_PATH, 45, NULL, 0);
 }
 
 int main(int argc, char **argv)
@@ -359,7 +422,6 @@ int main(int argc, char **argv)
     InitWindow(1280, 720, "Md Rayrender");
 
     load_fonts();
-
     render_state.screen_width = GetScreenWidth();
 
     LList *render_tree = create_render_tree(doc_item);
