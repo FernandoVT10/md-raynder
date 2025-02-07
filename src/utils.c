@@ -69,6 +69,17 @@ char *string_dump(String str)
     return res;
 }
 
+int string_find_index(String str, int start, char c)
+{
+    if(start > str.count - 1) return -1;
+
+    for(size_t i = start; i < str.count; i++) {
+        if(str.items[i] == c) return i;
+    }
+
+    return -1;
+}
+
 void string_free(String *str)
 {
     da_free(str);
@@ -83,4 +94,39 @@ void *allocate(size_t size)
     }
     memset(ptr, 0, size);
     return ptr;
+}
+
+LList *llist_create()
+{
+    return allocate(sizeof(LList));
+}
+
+void llist_append_node(LList *list, int type, void *data)
+{
+    LNode *node = allocate(sizeof(LNode));
+    node->type = type;
+    node->data = data;
+    node->next = NULL;
+
+    if(list->count == 0) {
+        list->head = node;
+        list->tail = node;
+    } else {
+        LNode *last_node = list->tail;
+        last_node->next = node;
+        list->tail = node;
+    }
+
+    list->count++;
+}
+
+void llist_destroy(LList *list)
+{
+    LNode *node = list->head;
+    while(node != NULL) {
+        LNode *free_node = node;
+        node = node->next;
+        free(free_node);
+    }
+    free(list);
 }

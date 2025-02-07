@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
@@ -27,15 +28,36 @@ typedef struct {
     size_t capacity;
 } String;
 
+typedef struct LNode LNode;
+
+struct LNode {
+    int type;
+    void *data;
+    LNode *next;
+};
+
+typedef struct {
+    LNode *head;
+    LNode *tail;
+    size_t count;
+} LList;
+
 char *load_file_contents(const char *path); // returns the contents of a file (should be freed)
 
 void string_append_char(String *str, char c);
 void string_append_str(String *str, const char *l_str); // appends string literal
-char *string_dump(String str); // returns a string null-terminated (should be freed)
+char *string_dump(String str); // returns a string null-terminated (should be freed
+
+// returns the index (starting from "start") if "c" is found. If "c" is not found, it returns -1
+int string_find_index(String str, int start, char c);
 void string_free(String *str); // frees string
 
 // allocates you "size" bytes of 0 initialized memory
 // NOTE: it aborts when malloc fails
 void *allocate(size_t size);
+
+LList *llist_create();
+void llist_append_node(LList *list, int type, void *data);
+void llist_destroy(LList *list);
 
 #endif // UTILS_H
