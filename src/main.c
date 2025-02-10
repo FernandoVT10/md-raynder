@@ -2,8 +2,8 @@
 #include <string.h>
 
 #include "raylib.h"
-#include "parser.h"
-#include "astprinter.h"
+#include "markdown/parser.h"
+#include "markdown/astprinter.h"
 
 // Colors
 #define COLOR_WHITE CLITERAL(Color){221, 221, 244, 255}
@@ -45,6 +45,7 @@ typedef enum {
 typedef struct {
     char* text;
     Rectangle rect;
+    bool hovered;
 } RETextChunk;
 
 typedef struct {
@@ -53,6 +54,7 @@ typedef struct {
     Color color;
     FontWeight weight;
     Color bg;
+    bool hovered;
 } RETextNode;
 
 typedef struct {
@@ -62,9 +64,16 @@ typedef struct {
     Color color;
 } RELineNode;
 
+typedef struct {
+    LList *children;
+    char *dest;
+    bool hovered;
+} RELinkNode;
+
 typedef enum {
     RENDER_TEXT_NODE,
     RENDER_LINE_NODE,
+    RENDER_LINK_NODE,
 } RenderNodeType;
 
 typedef struct {
@@ -333,6 +342,15 @@ void parse_ast_item(LList *list, ASTItem *item)
             create_render_text_node(list, code->content);
             re_parser_restore_ctx();
         } break;
+        case AST_LINK_NODE: {
+            LinkNode *link = (LinkNode*)item->data;
+            RELinkNode *re_link = allocate(sizeof(RELinkNode));
+            re_link->dest = string_dump(link->dest);
+            re_link->children = llist_create();
+
+            parse_ast_list(re_link->children, link->text);
+            llist_append_node(list, RENDER_LINK_NODE, re_link);
+        } break;
         default: break;
     }
 }
@@ -344,6 +362,76 @@ LList *create_render_tree(ASTItem *doc_item)
     parse_ast_item(list, doc_item);
 
     return list;
+}
+
+void update_text_node(RETextNode *text)
+{
+    LNode *node = text->chunks->head;
+    bool is_any_hovered = false;
+
+    while(node != NULL) {
+        RETextChunk *chunk = (RETextChunk*)node->data;
+
+        if(CheckCollisionPointRec(GetMousePosition(), chunk->rect)) {
+            is_any_hovered = true;
+            break;
+        }
+
+        node = node->next;
+    }
+
+    text->hovered = is_any_hovered;
+}
+
+void update_render_node(LNode *node);
+
+void update_link_node(RELinkNode *link)
+{
+    LNode *node = link->children->head;
+    bool is_any_hovered = false;
+
+    while(node != NULL) {
+        update_render_node(node);
+
+        if(node->type == RENDER_TEXT_NODE) {
+            RETextNode *text = (RETextNode*)node->data;
+            if(text->hovered) is_any_hovered = true;
+        }
+
+        node = node->next;
+    }
+
+    link->hovered = is_any_hovered;
+}
+
+void update_render_node(LNode *node)
+{
+    switch((RenderNodeType) node->type) {
+        case RENDER_TEXT_NODE: {
+            RETextNode *text = (RETextNode*)node->data;
+            update_text_node(text);
+        } break;
+        case RENDER_LINK_NODE: {
+            RELinkNode *link = (RELinkNode*)node->data;
+            update_link_node(link);
+
+            if(link->hovered) {
+                Vector2 mouse = GetMousePosition();
+                int size = 20;
+                DrawRectangle(mouse.x - size/2, mouse.y - size/2, size, size, BLUE);
+            }
+        } break;
+        case RENDER_LINE_NODE: break;
+    }
+}
+
+void update_render_list(LList *list)
+{
+    LNode *node = list->head;
+    while(node != NULL) {
+        update_render_node(node);
+        node = node->next;
+    }
 }
 
 void draw_text_node(RETextNode *text)
@@ -371,6 +459,8 @@ void draw_text_node(RETextNode *text)
     }
 }
 
+void draw_render_list(LList *list);
+
 void draw_render_node(LNode *node)
 {
     switch((RenderNodeType) node->type) {
@@ -382,16 +472,18 @@ void draw_render_node(LNode *node)
             RELineNode *line = (RELineNode*)node->data;
             DrawLineEx(line->start_pos, line->end_pos, line->thickness, line->color);
         } break;
+        case RENDER_LINK_NODE: {
+            RELinkNode *link = (RELinkNode*)node->data;
+            draw_render_list(link->children);
+        } break;
     }
 }
 
-void draw_render_list(LList *tree)
+void draw_render_list(LList *list)
 {
-    LNode *node = tree->head;
-
+    LNode *node = list->head;
     while(node != NULL) {
         draw_render_node(node);
-
         node = node->next;
     }
 }
@@ -430,6 +522,7 @@ int main(int argc, char **argv)
         BeginDrawing();
         ClearBackground(BLACK);
 
+        update_render_list(render_tree);
         draw_render_list(render_tree);
 
         EndDrawing();

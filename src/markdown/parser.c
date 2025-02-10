@@ -4,7 +4,7 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "utils.h"
+#include "../utils.h"
 #include "lexer.h"
 #include "parser.h"
 #include "raylib.h"

@@ -2,7 +2,7 @@
 #define NODES_H
 
 #include <stdbool.h>
-#include "utils.h"
+#include "../utils.h"
 
 typedef enum {
     AST_DOCUMENT_NODE,

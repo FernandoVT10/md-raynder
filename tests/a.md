@@ -9,3 +9,6 @@
 **Bold**
 *Italic*
 ***Bold and Italic***
+
+[Link](https://example.com)
+[Link with **bold**](https://youtube.com)
