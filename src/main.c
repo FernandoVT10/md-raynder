@@ -160,7 +160,7 @@ char* get_next_word_from_string(String str, int *start_pos)
         }
     } else {
         // copy the word
-        char *res = strndup(str.items + *start_pos, found_index - *start_pos);
+        char *res = strndup(str.items + *start_pos, found_index - *start_pos + 1);
         // we sum one to skip the space
         *start_pos = found_index + 1;
 
@@ -181,7 +181,6 @@ void create_render_text_node(LList *list, String str)
     int str_pos = 0;
     char *word;
 
-    bool is_first_word = true;
     String chunk_str = {0};
     Rectangle chunk_rect = {
         .x = render_state.parser.draw_pos.x,
@@ -196,15 +195,14 @@ void create_render_text_node(LList *list, String str)
     while((word = get_next_word_from_string(str, &str_pos)) != NULL) {
         Vector2 word_size = MeasureTextEx(font, word, text->size, DEFAULT_FONT_SPACING);
 
-        int word_width = word_size.x;
-
-        if(!is_first_word) {
-            word_width += space_width;
-        }
-
         int pos_x = render_state.parser.draw_pos.x;
 
-        if(pos_x + word_width > render_state.screen_width) {
+        if(pos_x + word_size.x > render_state.screen_width) {
+            if(chunk_str.count > 0 && chunk_str.items[chunk_str.count - 1] == ' ') {
+                chunk_str.count--;
+                chunk_rect.width -= space_width;
+            }
+
             RETextChunk *chunk = allocate(sizeof(RETextChunk));
             chunk->rect = chunk_rect;
             chunk->text = string_dump(chunk_str);
@@ -220,23 +218,11 @@ void create_render_text_node(LList *list, String str)
                 .y = render_state.parser.draw_pos.y,
                 .height = text->size,
             };
-
-            // remove the unnecessary space for the new line
-            if(!is_first_word) {
-                word_width -= space_width;
-            }
-
-            is_first_word = true;
-        }
-
-        if(!is_first_word) {
-            string_append_char(&chunk_str, ' ');
         }
 
         string_append_str(&chunk_str, word);
-        render_state.parser.draw_pos.x += word_width;
-        chunk_rect.width += word_width;
-        is_first_word = false;
+        render_state.parser.draw_pos.x += word_size.x + 2;
+        chunk_rect.width += word_size.x + 2;
         free(word);
     }
 
@@ -244,9 +230,9 @@ void create_render_text_node(LList *list, String str)
     chunk->rect = chunk_rect;
     chunk->text = string_dump(chunk_str);
     llist_append_node(text->chunks, RENDER_TEXT_NODE, chunk);
-    string_free(&chunk_str);
-
     llist_append_node(list, RENDER_TEXT_NODE, text);
+
+    string_free(&chunk_str);
 }
 
 void parse_ast_node(LList *list, LNode *node);
@@ -432,7 +418,7 @@ void update_render_link(RELinkNode *link)
 
     if(link->hovered && link->dest != NULL) {
         Font font = render_state.fonts.regular;
-        int font_size = 20;
+        int font_size = 16;
         int padding = 5;
 
         int screen_height = GetScreenHeight();
