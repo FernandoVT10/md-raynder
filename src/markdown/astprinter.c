@@ -27,26 +27,26 @@ void print_ast_node(LNode *node, int spaces)
 {
     switch(node->type) {
         case AST_DOCUMENT_NODE: {
-            DocumentNode *doc = (DocumentNode*)node->data;
+            DocumentNode *doc = node->data;
             print_open_tag("DOCUMENT", spaces);
                 print_ast_list(doc->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_PARAGRAPH_NODE: {
-            ParagraphNode *p = (ParagraphNode*)node->data;
+            ParagraphNode *p = node->data;
             print_open_tag("PARAGRAPH", spaces);
                 print_ast_list(p->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_TEXT_NODE: {
-            TextNode *t = (TextNode*)node->data;
+            TextNode *t = node->data;
             print_spaces(spaces);
             char *text = string_dump(t->str);
             printf("TEXT(%s)\n", text);
             free(text);
         } break;
         case AST_HEADER_NODE: {
-            HeaderNode *h = (HeaderNode*)node->data;
+            HeaderNode *h = node->data;
             print_open_tag(TextFormat("HEADER(%d)", h->level), spaces);
                 print_ast_list(h->children, spaces);
             print_close_tag(spaces);
@@ -56,26 +56,26 @@ void print_ast_node(LNode *node, int spaces)
             printf("HORIZONTAL RULE {}\n");
         } break;
         case AST_CODE_SPAN_NODE: {
-            CodeSpanNode *code = (CodeSpanNode*)node->data;
+            CodeSpanNode *code = node->data;
             print_open_tag("CODE_SPAN", spaces);
                 print_spaces(spaces + 4);
                 printf("TEXT(%s)\n", string_dump(code->content));
             print_close_tag(spaces);
         } break;
         case AST_STRONG_NODE: {
-            StrongNode *s = (StrongNode*)node->data;
+            StrongNode *s = node->data;
             print_open_tag("STRONG", spaces);
                 print_ast_list(s->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_EMPHASIS_NODE: {
-            EmphasisNode *e = (EmphasisNode*)node->data;
+            EmphasisNode *e = node->data;
             print_open_tag("EMPHASIS", spaces);
                 print_ast_list(e->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_LINK_NODE: {
-            LinkNode *link = (LinkNode*)node->data;
+            LinkNode *link = node->data;
             print_open_tag("LINK", spaces);
                 print_open_tag("LINK_TEXT", spaces + 4);
                     print_ast_list(link->text, spaces + 4);
@@ -88,7 +88,7 @@ void print_ast_node(LNode *node, int spaces)
             print_close_tag(spaces);
         } break;
         case AST_IMAGE_NODE: {
-            ImageNode *img = (ImageNode*)node->data;
+            ImageNode *img = node->data;
             print_open_tag("IMAGE", spaces);
                 print_spaces(spaces + 4);
                 printf("DESCRIPTION(%s)\n", string_dump(img->desc));
@@ -101,7 +101,7 @@ void print_ast_node(LNode *node, int spaces)
             print_close_tag(spaces);
         } break;
         case AST_BLOCKQUOTE_NODE: {
-            BlockquoteNode *q = (BlockquoteNode*)node->data;
+            BlockquoteNode *q = node->data;
             print_open_tag("BLOCKQUOTE", spaces);
                 print_ast_list(q->children, spaces);
             print_close_tag(spaces);
@@ -111,7 +111,7 @@ void print_ast_node(LNode *node, int spaces)
             printf("(SOFT_BREAK)\n");
         } break;
         case AST_LIST_NODE: {
-            ListNode *list = (ListNode*)node->data;
+            ListNode *list = node->data;
             const char *text = list->ordered ? "ORDERED" : "UNORDERED";
 
             print_spaces(spaces);
@@ -120,7 +120,7 @@ void print_ast_node(LNode *node, int spaces)
             print_close_tag(spaces);
         } break;
         case AST_LIST_ITEM_NODE: {
-            ListItemNode *l_item = (ListItemNode*)node->data;
+            ListItemNode *l_item = node->data;
             print_open_tag("LIST_ITEM", spaces);
                 print_ast_list(l_item->children, spaces);
             print_close_tag(spaces);

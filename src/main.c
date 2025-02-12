@@ -266,14 +266,14 @@ void parse_ast_node(LList *list, LNode *node)
     switch(node->type) {
         case AST_DOCUMENT_NODE:
         case AST_PARAGRAPH_NODE: {
-            ParentNode *parent = (ParentNode*)node->data;
+            ParentNode *parent = node->data;
             parse_ast_list(list, parent->children);
 
             render_state.parser.draw_pos.x = 0;
             render_state.parser.draw_pos.y += render_state.parser.ctx.font_size;
         } break;
         case AST_HEADER_NODE: {
-            HeaderNode *h = (HeaderNode*)node->data;
+            HeaderNode *h = node->data;
 
             int font_size = HEADER_FONT_SIZES[h->level - 1];
 
@@ -287,11 +287,11 @@ void parse_ast_node(LList *list, LNode *node)
             render_state.parser.draw_pos.y += font_size;
         } break;
         case AST_TEXT_NODE: {
-            TextNode *t = (TextNode*)node->data;
+            TextNode *t = node->data;
             create_render_text_node(list, t->str);
         } break;
         case AST_STRONG_NODE: {
-            StrongNode *strong = (StrongNode*)node->data;
+            StrongNode *strong = node->data;
 
             re_parser_save_ctx();
             if(render_state.parser.ctx.font_weight == FONT_WEIGHT_ITALIC) {
@@ -303,7 +303,7 @@ void parse_ast_node(LList *list, LNode *node)
             re_parser_restore_ctx();
         } break;
         case AST_EMPHASIS_NODE: {
-            EmphasisNode *em = (EmphasisNode*)node->data;
+            EmphasisNode *em = node->data;
 
             re_parser_save_ctx();
             if(render_state.parser.ctx.font_weight == FONT_WEIGHT_BOLD) {
@@ -332,7 +332,7 @@ void parse_ast_node(LList *list, LNode *node)
             render_state.parser.draw_pos.y += line->thickness;
         } break;
         case AST_CODE_SPAN_NODE: {
-            CodeSpanNode *code = (CodeSpanNode*)node->data;
+            CodeSpanNode *code = node->data;
 
             re_parser_save_ctx();
             render_state.parser.ctx.font_color = COLOR_BLUE;
@@ -341,7 +341,7 @@ void parse_ast_node(LList *list, LNode *node)
             re_parser_restore_ctx();
         } break;
         case AST_LINK_NODE: {
-            LinkNode *link = (LinkNode*)node->data;
+            LinkNode *link = node->data;
             RELinkNode *re_link = allocate(sizeof(RELinkNode));
             if(link->dest.count > 0) {
                 re_link->dest = string_dump(link->dest);
@@ -388,7 +388,7 @@ bool is_any_node_hovered(LList *nodes)
 
     while(node != NULL) {
         if(node->type == RENDER_TEXT_NODE) {
-            RETextNode *text = (RETextNode*)node->data;
+            RETextNode *text = node->data;
             if(is_any_text_chunk_hovered(text->chunks)) {
                 return true;
             }
@@ -467,7 +467,7 @@ void draw_text_node(RETextNode *text)
 {
     LNode *node = text->chunks->head;
     while(node != NULL) {
-        RETextChunk *chunk = (RETextChunk*)node->data;
+        RETextChunk *chunk = node->data;
 
         Vector2 pos = {chunk->rect.x, chunk->rect.y};
 
@@ -494,15 +494,15 @@ void draw_render_node(LNode *node)
 {
     switch((RenderNodeType) node->type) {
         case RENDER_TEXT_NODE: {
-            RETextNode *text = (RETextNode*)node->data;
+            RETextNode *text = node->data;
             draw_text_node(text);
         } break;
         case RENDER_LINE_NODE: {
-            RELineNode *line = (RELineNode*)node->data;
+            RELineNode *line = node->data;
             DrawLineEx(line->start_pos, line->end_pos, line->thickness, line->color);
         } break;
         case RENDER_LINK_NODE: {
-            RELinkNode *link = (RELinkNode*)node->data;
+            RELinkNode *link = node->data;
             update_render_link(link);
             draw_render_list(link->children);
         } break;

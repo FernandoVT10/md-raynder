@@ -235,7 +235,7 @@ void parse_text(LList *children)
     LNode *last_node = children->tail;
     TextNode *t;
     if(last_node != NULL && last_node->type == AST_TEXT_NODE) {
-        t = (TextNode*)last_node->data;
+        t = last_node->data;
     } else {
         t = allocate(sizeof(TextNode));
         llist_append_node(children, AST_TEXT_NODE, t);

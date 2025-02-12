@@ -26,39 +26,39 @@ void ast_free_node(LNode *node)
         case AST_LIST_ITEM_NODE:
         case AST_STRONG_NODE:
         case AST_EMPHASIS_NODE: {
-            ParentNode *parent = (ParentNode*)node->data;
+            ParentNode *parent = node->data;
             ast_free_list(parent->children);
             free(parent);
         } break;
         case AST_TEXT_NODE: {
-            TextNode *t = (TextNode*)node->data;
+            TextNode *t = node->data;
             da_free(&t->str);
             free(t);
         } break;
         case AST_HEADER_NODE: {
-            HeaderNode *h = (HeaderNode*)node->data;
+            HeaderNode *h = node->data;
             ast_free_list(h->children);
             free(h);
         } break;
         case AST_CODE_SPAN_NODE: {
-            CodeSpanNode *code = (CodeSpanNode*)node->data;
+            CodeSpanNode *code = node->data;
             da_free(&code->content);
             free(code);
         } break;
         case AST_LINK_NODE: {
-            LinkNode *link = (LinkNode*)node->data;
+            LinkNode *link = node->data;
             ast_free_list(link->text);
             da_free(&link->dest);
             free(link);
         } break;
         case AST_IMAGE_NODE: {
-            ImageNode *img = (ImageNode*)node->data;
+            ImageNode *img = node->data;
             string_free(&img->desc);
             string_free(&img->uri);
             free(img);
         } break;
         case AST_LIST_NODE: {
-            ListNode *l = (ListNode*)node->data;
+            ListNode *l = node->data;
             ast_free_list(l->children);
             free(l);
         } break;
