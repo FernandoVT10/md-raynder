@@ -45,7 +45,6 @@ typedef enum {
 typedef struct {
     char* text;
     Rectangle rect;
-    bool hovered;
 } RETextChunk;
 
 typedef struct {
@@ -54,7 +53,6 @@ typedef struct {
     Color color;
     FontWeight weight;
     Color bg;
-    bool hovered;
 } RETextNode;
 
 typedef struct {
@@ -251,31 +249,31 @@ void create_render_text_node(LList *list, String str)
     llist_append_node(list, RENDER_TEXT_NODE, text);
 }
 
-void parse_ast_item(LList *list, ASTItem *item);
+void parse_ast_node(LList *list, LNode *node);
 
-void parse_ast_list(LList *list, ASTList ast_list)
+void parse_ast_list(LList *list, LList *ast_list)
 {
-    ASTItem *item = ast_list.head;
+    LNode *node = ast_list->head;
 
-    while(item != NULL) {
-        parse_ast_item(list, item);
-        item = item->next;
+    while(node != NULL) {
+        parse_ast_node(list, node);
+        node = node->next;
     }
 }
 
-void parse_ast_item(LList *list, ASTItem *item)
+void parse_ast_node(LList *list, LNode *node)
 {
-    switch(item->type) {
+    switch(node->type) {
         case AST_DOCUMENT_NODE:
         case AST_PARAGRAPH_NODE: {
-            ParentNode *parent = (ParentNode*)item->data;
+            ParentNode *parent = (ParentNode*)node->data;
             parse_ast_list(list, parent->children);
 
             render_state.parser.draw_pos.x = 0;
             render_state.parser.draw_pos.y += render_state.parser.ctx.font_size;
         } break;
         case AST_HEADER_NODE: {
-            HeaderNode *h = (HeaderNode*)item->data;
+            HeaderNode *h = (HeaderNode*)node->data;
 
             int font_size = HEADER_FONT_SIZES[h->level - 1];
 
@@ -289,11 +287,11 @@ void parse_ast_item(LList *list, ASTItem *item)
             render_state.parser.draw_pos.y += font_size;
         } break;
         case AST_TEXT_NODE: {
-            TextNode *t = (TextNode*)item->data;
+            TextNode *t = (TextNode*)node->data;
             create_render_text_node(list, t->str);
         } break;
         case AST_STRONG_NODE: {
-            StrongNode *strong = (StrongNode*)item->data;
+            StrongNode *strong = (StrongNode*)node->data;
 
             re_parser_save_ctx();
             if(render_state.parser.ctx.font_weight == FONT_WEIGHT_ITALIC) {
@@ -305,7 +303,7 @@ void parse_ast_item(LList *list, ASTItem *item)
             re_parser_restore_ctx();
         } break;
         case AST_EMPHASIS_NODE: {
-            EmphasisNode *em = (EmphasisNode*)item->data;
+            EmphasisNode *em = (EmphasisNode*)node->data;
 
             re_parser_save_ctx();
             if(render_state.parser.ctx.font_weight == FONT_WEIGHT_BOLD) {
@@ -334,7 +332,7 @@ void parse_ast_item(LList *list, ASTItem *item)
             render_state.parser.draw_pos.y += line->thickness;
         } break;
         case AST_CODE_SPAN_NODE: {
-            CodeSpanNode *code = (CodeSpanNode*)item->data;
+            CodeSpanNode *code = (CodeSpanNode*)node->data;
 
             re_parser_save_ctx();
             render_state.parser.ctx.font_color = COLOR_BLUE;
@@ -343,9 +341,11 @@ void parse_ast_item(LList *list, ASTItem *item)
             re_parser_restore_ctx();
         } break;
         case AST_LINK_NODE: {
-            LinkNode *link = (LinkNode*)item->data;
+            LinkNode *link = (LinkNode*)node->data;
             RELinkNode *re_link = allocate(sizeof(RELinkNode));
-            re_link->dest = string_dump(link->dest);
+            if(link->dest.count > 0) {
+                re_link->dest = string_dump(link->dest);
+            }
             re_link->children = llist_create();
 
             parse_ast_list(re_link->children, link->text);
@@ -355,82 +355,111 @@ void parse_ast_item(LList *list, ASTItem *item)
     }
 }
 
-LList *create_render_tree(ASTItem *doc_item)
+LList *create_render_tree(LNode *doc_node)
 {
     LList *list = llist_create();
 
-    parse_ast_item(list, doc_item);
+    parse_ast_node(list, doc_node);
 
     return list;
 }
 
-void update_text_node(RETextNode *text)
+bool is_any_text_chunk_hovered(LList *chunks)
 {
-    LNode *node = text->chunks->head;
-    bool is_any_hovered = false;
+    LNode *node = chunks->head;
+    Vector2 mouse_pos = GetMousePosition();
 
     while(node != NULL) {
-        RETextChunk *chunk = (RETextChunk*)node->data;
+        RETextChunk *chunk = node->data;
 
-        if(CheckCollisionPointRec(GetMousePosition(), chunk->rect)) {
-            is_any_hovered = true;
-            break;
+        if(CheckCollisionPointRec(mouse_pos, chunk->rect)) {
+            return true;
         }
 
         node = node->next;
     }
 
-    text->hovered = is_any_hovered;
+    return false;
 }
 
-void update_render_node(LNode *node);
-
-void update_link_node(RELinkNode *link)
+bool is_any_node_hovered(LList *nodes)
 {
-    LNode *node = link->children->head;
-    bool is_any_hovered = false;
+    LNode *node = nodes->head;
 
     while(node != NULL) {
-        update_render_node(node);
-
         if(node->type == RENDER_TEXT_NODE) {
             RETextNode *text = (RETextNode*)node->data;
-            if(text->hovered) is_any_hovered = true;
+            if(is_any_text_chunk_hovered(text->chunks)) {
+                return true;
+            }
         }
 
         node = node->next;
     }
 
-    link->hovered = is_any_hovered;
+    return false;
 }
 
-void update_render_node(LNode *node)
+void set_link_children_color(LList *children, Color color)
 {
-    switch((RenderNodeType) node->type) {
-        case RENDER_TEXT_NODE: {
-            RETextNode *text = (RETextNode*)node->data;
-            update_text_node(text);
-        } break;
-        case RENDER_LINK_NODE: {
-            RELinkNode *link = (RELinkNode*)node->data;
-            update_link_node(link);
-
-            if(link->hovered) {
-                Vector2 mouse = GetMousePosition();
-                int size = 20;
-                DrawRectangle(mouse.x - size/2, mouse.y - size/2, size, size, BLUE);
-            }
-        } break;
-        case RENDER_LINE_NODE: break;
+    LNode *node = children->head;
+    while(node != NULL) {
+        if(node->type == RENDER_TEXT_NODE) {
+            RETextNode *text = node->data;
+            text->color = color;
+        }
+        node = node->next;
     }
 }
 
-void update_render_list(LList *list)
+void update_render_link(RELinkNode *link)
 {
-    LNode *node = list->head;
-    while(node != NULL) {
-        update_render_node(node);
-        node = node->next;
+    bool is_hovered = is_any_node_hovered(link->children);
+
+    if(is_hovered && !link->hovered) {
+        link->hovered = true;
+        set_link_children_color(link->children, COLOR_BLUE);
+    } else if(!is_hovered && link->hovered) {
+        link->hovered = false;
+        set_link_children_color(link->children, COLOR_WHITE);
+    }
+
+    if(link->hovered
+        && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
+        && link->dest != NULL) {
+        system(TextFormat("xdg-open %s", link->dest));
+    }
+
+    if(link->hovered && link->dest != NULL) {
+        Font font = render_state.fonts.regular;
+        int font_size = 20;
+        int padding = 5;
+
+        int screen_height = GetScreenHeight();
+
+        Vector2 text_size = MeasureTextEx(font, link->dest, font_size, DEFAULT_FONT_SPACING);
+
+        {
+            int posY = screen_height - text_size.y - padding * 2;
+            int width = text_size.x + padding * 2;
+            int height = text_size.y + padding * 2;
+            DrawRectangle(0, posY, width, height, COLOR_BLUE_BG);
+        }
+
+        {
+            Vector2 pos = {
+                .x = padding,
+                .y = GetScreenHeight() - text_size.y - padding,
+            };
+            DrawTextEx(
+                font,
+                link->dest,
+                pos,
+                font_size,
+                DEFAULT_FONT_SPACING,
+                COLOR_BLUE
+            );
+        }
     }
 }
 
@@ -474,6 +503,7 @@ void draw_render_node(LNode *node)
         } break;
         case RENDER_LINK_NODE: {
             RELinkNode *link = (RELinkNode*)node->data;
+            update_render_link(link);
             draw_render_list(link->children);
         } break;
     }
@@ -485,6 +515,30 @@ void draw_render_list(LList *list)
     while(node != NULL) {
         draw_render_node(node);
         node = node->next;
+    }
+}
+
+void update_mouse_cursor(LList *list)
+{
+    bool is_link_hovered = false;
+
+    LNode *node = list->head;
+    while(node != NULL) {
+        if(node->type == RENDER_LINK_NODE) {
+            RELinkNode *link = node->data;
+            if(link->hovered) {
+                is_link_hovered = true;
+                break;
+            }
+        }
+
+        node = node->next;
+    }
+
+    if(is_link_hovered) {
+        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    } else {
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
     }
 }
 
@@ -505,9 +559,9 @@ int main(int argc, char **argv)
 
     const char *file_path = argv[1];
 
-    ASTItem *doc_item = parse_md_file(file_path);
+    LNode *doc_node = parse_md_file(file_path);
 
-    if(doc_item == NULL) {
+    if(doc_node == NULL) {
         return -1;
     }
 
@@ -516,14 +570,15 @@ int main(int argc, char **argv)
     load_fonts();
     render_state.screen_width = GetScreenWidth();
 
-    LList *render_tree = create_render_tree(doc_item);
+    LList *render_tree = create_render_tree(doc_node);
 
     while(!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(BLACK);
 
-        update_render_list(render_tree);
         draw_render_list(render_tree);
+
+        update_mouse_cursor(render_tree);
 
         EndDrawing();
     }
@@ -531,6 +586,6 @@ int main(int argc, char **argv)
     CloseWindow();
 
     // print_ast(doc_item);
-    ast_free_item(doc_item);
+    ast_free_node(doc_node);
     return 0;
 }

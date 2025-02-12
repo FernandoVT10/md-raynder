@@ -12,3 +12,4 @@
 
 [Link](https://example.com)
 [Link with **bold**](https://youtube.com)
+[Link without destination]

@@ -21,34 +21,34 @@ void print_close_tag(int spaces)
     printf("}\n");
 }
 
-void print_list(ASTList list, int spaces);
+void print_ast_list(LList *list, int spaces);
 
-void print_item(ASTItem *item, int spaces)
+void print_ast_node(LNode *node, int spaces)
 {
-    switch(item->type) {
+    switch(node->type) {
         case AST_DOCUMENT_NODE: {
-            DocumentNode *doc = (DocumentNode*)item->data;
+            DocumentNode *doc = (DocumentNode*)node->data;
             print_open_tag("DOCUMENT", spaces);
-                print_list(doc->children, spaces);
+                print_ast_list(doc->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_PARAGRAPH_NODE: {
-            ParagraphNode *p = (ParagraphNode*)item->data;
+            ParagraphNode *p = (ParagraphNode*)node->data;
             print_open_tag("PARAGRAPH", spaces);
-                print_list(p->children, spaces);
+                print_ast_list(p->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_TEXT_NODE: {
-            TextNode *t = (TextNode*)item->data;
+            TextNode *t = (TextNode*)node->data;
             print_spaces(spaces);
             char *text = string_dump(t->str);
             printf("TEXT(%s)\n", text);
             free(text);
         } break;
         case AST_HEADER_NODE: {
-            HeaderNode *h = (HeaderNode*)item->data;
+            HeaderNode *h = (HeaderNode*)node->data;
             print_open_tag(TextFormat("HEADER(%d)", h->level), spaces);
-                print_list(h->children, spaces);
+                print_ast_list(h->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_HR_NODE: {
@@ -56,29 +56,29 @@ void print_item(ASTItem *item, int spaces)
             printf("HORIZONTAL RULE {}\n");
         } break;
         case AST_CODE_SPAN_NODE: {
-            CodeSpanNode *code = (CodeSpanNode*)item->data;
+            CodeSpanNode *code = (CodeSpanNode*)node->data;
             print_open_tag("CODE_SPAN", spaces);
                 print_spaces(spaces + 4);
                 printf("TEXT(%s)\n", string_dump(code->content));
             print_close_tag(spaces);
         } break;
         case AST_STRONG_NODE: {
-            StrongNode *s = (StrongNode*)item->data;
+            StrongNode *s = (StrongNode*)node->data;
             print_open_tag("STRONG", spaces);
-                print_list(s->children, spaces);
+                print_ast_list(s->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_EMPHASIS_NODE: {
-            EmphasisNode *e = (EmphasisNode*)item->data;
+            EmphasisNode *e = (EmphasisNode*)node->data;
             print_open_tag("EMPHASIS", spaces);
-                print_list(e->children, spaces);
+                print_ast_list(e->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_LINK_NODE: {
-            LinkNode *link = (LinkNode*)item->data;
+            LinkNode *link = (LinkNode*)node->data;
             print_open_tag("LINK", spaces);
                 print_open_tag("LINK_TEXT", spaces + 4);
-                    print_list(link->text, spaces + 4);
+                    print_ast_list(link->text, spaces + 4);
                 print_close_tag(spaces + 4);
 
             if(link->dest.count > 0) {
@@ -88,7 +88,7 @@ void print_item(ASTItem *item, int spaces)
             print_close_tag(spaces);
         } break;
         case AST_IMAGE_NODE: {
-            ImageNode *img = (ImageNode*)item->data;
+            ImageNode *img = (ImageNode*)node->data;
             print_open_tag("IMAGE", spaces);
                 print_spaces(spaces + 4);
                 printf("DESCRIPTION(%s)\n", string_dump(img->desc));
@@ -101,9 +101,9 @@ void print_item(ASTItem *item, int spaces)
             print_close_tag(spaces);
         } break;
         case AST_BLOCKQUOTE_NODE: {
-            BlockquoteNode *q = (BlockquoteNode*)item->data;
+            BlockquoteNode *q = (BlockquoteNode*)node->data;
             print_open_tag("BLOCKQUOTE", spaces);
-                print_list(q->children, spaces);
+                print_ast_list(q->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_SB_NODE: {
@@ -111,34 +111,34 @@ void print_item(ASTItem *item, int spaces)
             printf("(SOFT_BREAK)\n");
         } break;
         case AST_LIST_NODE: {
-            ListNode *list = (ListNode*)item->data;
+            ListNode *list = (ListNode*)node->data;
             const char *text = list->ordered ? "ORDERED" : "UNORDERED";
 
             print_spaces(spaces);
             printf("LIST(%s) {\n", text);
-                print_list(list->children, spaces);
+                print_ast_list(list->children, spaces);
             print_close_tag(spaces);
         } break;
         case AST_LIST_ITEM_NODE: {
-            ListItemNode *l_item = (ListItemNode*)item->data;
+            ListItemNode *l_item = (ListItemNode*)node->data;
             print_open_tag("LIST_ITEM", spaces);
-                print_list(l_item->children, spaces);
+                print_ast_list(l_item->children, spaces);
             print_close_tag(spaces);
         } break;
     }
 }
 
-void print_list(ASTList list, int spaces)
+void print_ast_list(LList *list, int spaces)
 {
-    ASTItem *item = list.head;
-    while(item != NULL) {
-        print_item(item, spaces + 4);
+    LNode *node = list->head;
+    while(node != NULL) {
+        print_ast_node(node, spaces + 4);
 
-        item = item->next;
+        node = node->next;
     }
 }
 
-void print_ast(ASTItem *doc_item)
+void print_ast(LNode *doc_node)
 {
-    print_item(doc_item, 0);
+    print_ast_node(doc_node, 0);
 }

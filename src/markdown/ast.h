@@ -21,35 +21,17 @@ typedef enum {
     AST_LIST_ITEM_NODE,
 } ASTNodeType;
 
-typedef struct ASTItem ASTItem;
-
-struct ASTItem {
-    ASTNodeType type;
-    void *data;
-    ASTItem *next;
-};
-
 typedef struct {
-    ASTItem *head;
-    ASTItem *tail;
-    size_t count;
-} ASTList;
-
-typedef struct {
-    ASTList children;
+    LList *children;
 } ParentNode;
 
 typedef ParentNode DocumentNode;
 
-typedef struct {
-    ASTList children;
-    bool allow_nesting;
-} ParagraphNode;
-
+typedef ParentNode ParagraphNode;
 typedef ParentNode BlockquoteNode;
 
 typedef struct {
-    ASTList children;
+    LList *children;
     bool ordered;
 } ListNode;
 typedef ParentNode ListItemNode;
@@ -59,7 +41,7 @@ typedef struct {
 } TextNode;
 
 typedef struct {
-    ASTList children;
+    LList *children;
     int level;
 } HeaderNode;
 
@@ -71,7 +53,7 @@ typedef ParentNode StrongNode;
 typedef ParentNode EmphasisNode;
 
 typedef struct {
-    ASTList text;
+    LList *text;
     String dest;
 } LinkNode;
 
@@ -80,12 +62,7 @@ typedef struct {
     String uri;
 } ImageNode;
 
-ASTItem *ast_create_item(ASTNodeType type, void *data);
-void ast_add_item(ASTList *list, ASTItem *item); // adds and ASTItem to an ASTList
-void ast_list_create_and_add(ASTList *list, ASTNodeType type, void *data); // creates ASTItem and adds it to the list
-void ast_free_list(ASTList *list);
-void ast_free_item(ASTItem *item);
-void ast_add_text(ASTList *list, const char *text); // Adds or catenates (if the last item of the list is a text node) a text node
-void ast_catenate_lists(ASTList *dest, const ASTList *src); // Adds the elements of the src list to the dest list
+void ast_free_list(LList *list);
+void ast_free_node(LNode *node);
 
 #endif

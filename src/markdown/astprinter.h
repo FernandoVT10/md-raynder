@@ -3,6 +3,6 @@
 
 #include "ast.h"
 
-void print_ast(ASTItem *doc_item);
+void print_ast(LNode *doc_node);
 
 #endif // AST_PRINTER_H
